@@ -15,7 +15,7 @@ export default async function LoginPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-10">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">Muscu</h1>
-        <p className="mt-1 text-sm text-muted">24 août → 20 décembre 2026 · 17 semaines</p>
+        <p className="mt-1 text-sm text-muted">Suivi d&apos;entraînement, de diète et de progression</p>
       </div>
 
       <LoginForm />

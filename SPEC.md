@@ -3,8 +3,8 @@
 Dernière mise à jour : 2026-08-26
 Statut : **implémenté et vérifié en local**, sur `PROGRAMME-COMPLET.md` (source de vérité).
 Application **multi-comptes** : chaque personne a son programme et son journal.
-Reste à reprendre le schéma de la base Neon (elle porte encore la version mono-compte) et à
-importer le programme de Nourah.
+Deux programmes importés et déployés : musculation PPL + calisthénie sur 17 semaines, et
+musculation à domicile sur 18 semaines.
 
 ---
 
@@ -207,7 +207,22 @@ emporte son programme et son journal (clés étrangères en cascade).
 En ligne de commande : `npm run users -- list | create | password | delete`, nécessaire pour créer
 le tout premier compte, quand personne ne peut encore se connecter.
 
-### 4.18 Photos de progression — non implémenté
+### 4.18 Profil — stable
+Nom affiché, stature, date de naissance, poids visé, cibles de protéines et d'eau, bornes du
+programme du compte, changement de mot de passe, déconnexion. La pesée du jour y est accessible
+mais part dans le journal : c'est une mesure, pas une caractéristique.
+
+Deux repères calculés, jamais stockés : l'IMC — affiché sans commentaire de catégorie, il ne
+distingue pas le muscle du gras — et le rapport tour de taille / stature, plus utile en
+recomposition puisqu'il ignore le muscle pris ailleurs.
+
+### 4.19 Un programme par compte — stable
+Aucune date, aucun découpage n'est écrit dans le code. Bornes, nombre de semaines, noms de blocs,
+consignes hebdomadaires, dates de contrôle et présence de l'onglet *Calisthénie* viennent du
+programme importé pour le compte connecté. Un compte sans programme reste utilisable : diète,
+poids, sommeil, entraînements libres.
+
+### 4.20 Photos de progression — non implémenté
 Stockage externe à trancher (Vercel Blob, seul poste potentiellement payant).
 
 ---
@@ -270,22 +285,20 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 |---|---|---|
 | Architecture | 8/10 | Domaine métier isolé et testé, hors-ligne pensé dès le départ. Le couplage entre le seed et le format des PDF reste un point faible. |
 | Qualité code | 8/10 | Typecheck et lint stricts, conventions homogènes, commentaires qui expliquent le pourquoi. Quelques pages longues. |
-| Tests | 8/10 | 120 tests unitaires sur toutes les règles métier, test de fumée sur 13 pages et 7 comportements d'API, dont le refus de l'administration à un compte ordinaire. Aucun test de parcours (interaction, hors-ligne réel). |
+| Tests | 8,5/10 | 127 tests unitaires sur toutes les règles métier, test de fumée sur 13 pages et 7 comportements d'API, dont le refus de l'administration à un compte ordinaire. Aucun test de parcours (interaction, hors-ligne réel). |
 | Sécurité | 8,5/10 | Faille haute corrigée, validation Zod sur toutes les écritures, scrypt, cookie chiffré, comparaison à temps constant, cloisonnement des comptes imposé côté serveur et vérifié bout en bout. Reste : les mots de passe initiaux, à changer au premier passage, et un avertissement modéré sur un outil de développement. |
 | Performance | 8/10 | Build en 12,6 s, graphiques sans JS client, pages dynamiques légères (25–140 Ko). |
 | Maintenabilité | 8/10 | Règles métier lisibles et localisées, décisions documentées. Le parseur PDF demande de la vigilance à chaque révision des documents. |
-| Infrastructure | 7/10 | Prêt pour Vercel mais **jamais déployé ni testé sur Neon** ; aucune CI. |
-| **Global** | **7,5/10** | Solide et vérifié en local ; la note monte dès le premier déploiement réussi. |
+| Infrastructure | 8/10 | Déployé sur Vercel et Neon, migrations versionnées et rejouées sans destruction. Aucune CI. |
+| **Global** | **8/10** | Déployé, cloisonné, et deux programmes réels en production. |
 
 ---
 
 ## 10. Reste à faire
 
-1. **Reprendre le schéma Neon** : il porte encore la version mono-compte (`settings`, pas de
-   `users`). Inventaire fait avant : aucune donnée saisie à préserver.
-2. Créer les trois comptes, importer le programme d'Abdou, **changer les mots de passe initiaux**.
-3. Importer le programme de Nourah dès qu'il est fourni.
-4. Importer les fiches d'exécution des exercices.
-5. Brancher le stockage des photos de progression.
-6. Ajouter des tests de parcours, notamment du mode hors-ligne réel.
-7. Mettre en place une CI (`npm run verify`).
+1. **Changer les mots de passe initiaux** depuis l'écran *Profil* : ils ont transité par une
+   conversation et une ligne de commande.
+2. Importer les fiches d'exécution des exercices.
+3. Brancher le stockage des photos de progression.
+4. Ajouter des tests de parcours, notamment du mode hors-ligne réel.
+5. Mettre en place une CI (`npm run verify`).

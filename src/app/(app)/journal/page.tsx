@@ -20,7 +20,7 @@ const PROGRAM_START = "2026-08-24";
 const PROGRAM_END = "2026-12-20";
 
 /**
- * Journal : calendrier des 17 semaines, assiduité, et lecture des absences.
+ * Journal : calendrier du programme, assiduité, et lecture des absences.
  *
  * Le calendrier n'est pas décoratif : c'est par lui qu'on ouvre un jour passé
  * pour le saisir après coup.
@@ -97,7 +97,7 @@ export default async function JournalPage() {
     <>
       <PageHeader
         title="Journal"
-        subtitle="17 semaines, jour par jour. Touche un jour passé pour l'enregistrer après coup."
+        subtitle="Le programme jour par jour. Touche un jour passé pour l'enregistrer après coup."
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

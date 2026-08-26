@@ -246,7 +246,8 @@ export const programs = pgTable(
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    code: text("code").notNull(), // "ppl" | "calisthenie"
+    /** Identifiant court, propre au compte : « ppl », « calisthenie », « maison ». */
+    code: text("code").notNull(),
     name: text("name").notNull(),
     startDate: date("start_date").notNull(),
     endDate: date("end_date").notNull(),
@@ -490,7 +491,7 @@ export const progressPhotos = pgTable("progress_photos", {
   url: text("url").notNull(),
 });
 
-/** Les 4 contrôles physiques jalonnés (19 sept, 17 oct, 14 nov, 19 déc). */
+/** Contrôles physiques jalonnés par le programme du compte. */
 export const checkpoints = pgTable(
   "checkpoints",
   {

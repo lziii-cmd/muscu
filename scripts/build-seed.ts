@@ -122,7 +122,37 @@ mkdirSync("data/seed", { recursive: true });
 writeFileSync(
   "data/seed/programme.json",
   JSON.stringify(
-    { generatedAt: new Date().toISOString(), year: YEAR, source: SOURCE, checkpointDates: CHECKPOINT_DATES, ...parsed },
+    {
+      generatedAt: new Date().toISOString(),
+      year: YEAR,
+      source: SOURCE,
+      checkpointDates: CHECKPOINT_DATES,
+      /*
+       * Les programmes sont listés plutôt que nommés en dur : chaque personne
+       * n'a pas le même découpage. Nourah en a un seul, à domicile ; le
+       * document d'Abdou en a deux, musculation et calisthénie.
+       */
+      programs: [
+        {
+          code: "ppl",
+          name: "Musculation PPL -- Soir",
+          defaultSlot: "salle",
+          weeks: parsed.ppl.weeks,
+          days: parsed.ppl.days,
+        },
+        {
+          code: "calisthenie",
+          name: "Calisthénie",
+          defaultSlot: "matin",
+          weeks: parsed.calisthenie.weeks,
+          days: parsed.calisthenie.days,
+        },
+      ],
+      ladders: parsed.ladders,
+      targets: parsed.targets,
+      testMetrics: parsed.testMetrics,
+      startingMax: parsed.startingMax,
+    },
     null,
     2,
   ),

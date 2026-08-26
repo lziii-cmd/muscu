@@ -1,7 +1,12 @@
 import { Alert, Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { LineChart } from "@/components/charts";
 import { MeasurementForm, WeightForm } from "@/components/entry-forms";
-import { getBodyweightEntries, getMeasurements, getTrackedExercises } from "@/lib/queries";
+import {
+  getBodyweightEntries,
+  getCheckpoints,
+  getMeasurements,
+  getTrackedExercises,
+} from "@/lib/queries";
 import { movingAverage, recompositionVerdict, trendOf, weeklyChange } from "@/lib/domain/body";
 import { formatDate, today } from "@/lib/utils";
 
@@ -14,11 +19,23 @@ export const dynamic = "force-dynamic";
  * met donc en avant la moyenne mobile et le verdict croisé, pas la pesée du jour.
  */
 export default async function CorpsPage() {
-  const [entries, measurements, tracked] = await Promise.all([
+  const [entries, measurements, tracked, checkpoints] = await Promise.all([
     getBodyweightEntries(),
     getMeasurements(),
     getTrackedExercises(),
+    getCheckpoints(),
   ]);
+
+  /*
+   * Les dates de contrôle sont celles du programme du compte. Elles étaient
+   * écrites en dur, donc justes pour une personne et fausses pour l'autre.
+   */
+  const checkpointHint =
+    checkpoints.length > 0
+      ? `À relever aux ${checkpoints.length} contrôles : ${checkpoints
+          .map((checkpoint) => formatDate(checkpoint.date, { short: true }))
+          .join(", ")}`
+      : "À relever à chaque contrôle physique.";
 
   const todayIso = today();
   const averages = movingAverage(entries);
@@ -116,7 +133,7 @@ export default async function CorpsPage() {
         </Card>
 
         <Card>
-          <CardTitle hint="À relever aux 4 contrôles : 19 sept, 17 oct, 14 nov, 19 déc">
+          <CardTitle hint={checkpointHint}>
             Mensurations
           </CardTitle>
           <MeasurementForm date={todayIso} initial={latestMeasurements} />

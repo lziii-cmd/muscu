@@ -18,7 +18,9 @@
     "seed:build": "tsx scripts/build-seed.ts",
     "verify": "npm run typecheck && npm run lint && npm run test",
     "smoke": "tsx scripts/smoke.ts",
-    "users": "tsx scripts/users.ts"
+    "users": "tsx scripts/users.ts",
+    "nourah:convert": "tsx scripts/convert-nourah.ts",
+    "nourah:seed": "tsx scripts/build-seed-nourah.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

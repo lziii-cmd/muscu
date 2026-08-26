@@ -1,9 +1,14 @@
 # Muscu — plateforme de suivi d'entraînement
 
-Suivi des 17 semaines de programme du **24 août au 20 décembre 2026** : musculation PPL le soir,
-calisthénie matin et soir, diète recomposition. PWA installable, utilisable hors-ligne.
+Suivi d'entraînement, de diète et de progression. PWA installable, utilisable hors-ligne.
 
-Le contenu des programmes vient de **`PROGRAMME-COMPLET.md`**, qui se déclare source de vérité.
+**Un programme par personne.** Aucune date, aucun découpage n'est écrit dans le code : les bornes,
+les blocs, les jours et les contrôles viennent du programme importé pour le compte connecté. Deux
+programmes cohabitent aujourd'hui — une musculation PPL avec calisthénie sur 17 semaines, et une
+musculation à domicile sur 18 semaines, sans calisthénie.
+
+Le contenu des programmes vient de documents Markdown qui se déclarent source de vérité :
+**`PROGRAMME-COMPLET.md`** et **`PROGRAMME-NOURAH.md`**.
 L'application remplace le papier en tant qu'outil de saisie, notamment les trois tableaux que le
 document laisse volontairement vides (tableau de charges, tests de force, contrôles physiques).
 
@@ -72,6 +77,27 @@ celui des autres. On peut donc le relancer, et importer un programme différent 
 npm run db:seed -- --user nourah --seed data/seed/nourah.json
 ```
 
+### 5. Un programme livré en PDF
+
+Le second programme est arrivé en trois PDF. Ils sont convertis en Markdown une fois pour toutes,
+et c'est le Markdown qui alimente la suite :
+
+```bash
+pdftotext -table -enc UTF-8 musculation-nourah.pdf data/extraits/nourah-musculation.txt
+```
+
+```bash
+npm run nourah:convert
+```
+
+```bash
+npm run nourah:seed
+```
+
+La conversion produit `PROGRAMME-NOURAH.md` ; `nourah:seed` en tire `data/seed/nourah.json` et
+`data/seed/REVUE-NOURAH.md`, et **refuse d'écrire** si un contrôle échoue : semaine sans consigne,
+date en double, dimanche non chômé, ou nombre de séances de musculation qui s'écarte de trois.
+
 ### 4. Lancer
 
 ```bash
@@ -119,6 +145,8 @@ journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 | `npm run users -- create --user X --password "…"` | Crée un compte (`--role admin` pour l'administration) |
 | `npm run db:reset` | **Destructif** — vide le schéma |
 | `npm run seed:build` | Reconstruit le seed depuis `PROGRAMME-COMPLET.md` |
+| `npm run nourah:convert` | Convertit les PDF de Nourah en `PROGRAMME-NOURAH.md` |
+| `npm run nourah:seed` | Reconstruit son seed depuis ce Markdown |
 | `npm run smoke` | Test de fumée autonome (après `npm run build`) — tourne toujours sur PGlite, jamais sur Neon |
 | `npm run users -- password --user X --password "…"` | Remplace le mot de passe d'un compte |
 | `npm run users -- rename --user X --name "…"` | Change le nom affiché |
@@ -163,6 +191,14 @@ Les mots de passe sont hachés avec scrypt (sel aléatoire, `N = 16384`) et comp
 constant. Personne — pas même l'administrateur — ne peut relire un mot de passe : il ne peut qu'en
 imposer un nouveau. Tant qu'un compte utilise son mot de passe d'origine, un bandeau le rappelle
 sur chaque écran ; il disparaît au premier changement.
+
+### Rien du programme n'est écrit dans le code
+
+Les bornes de dates, le nombre de semaines, les noms de blocs, les dates de contrôle et jusqu'à la
+présence d'un onglet « Calisthénie » viennent du compte connecté. Ce n'était pas le cas au départ :
+neuf endroits portaient les dates du premier programme, dont un qui calculait le lundi de la semaine
+N à partir d'une constante — sur un second programme démarrant deux jours plus tard, toutes les
+colonnes de charges se seraient décalées d'une semaine, sans rien afficher d'anormal.
 
 ### Le domaine métier est isolé
 

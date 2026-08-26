@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
-import { getExerciseHistory, getTrackedExercises } from "@/lib/queries";
+import { getExerciseHistory, getProgramBounds, getTrackedExercises } from "@/lib/queries";
 import {
   bestEstimatedOneRepMax,
   detectPersonalRecords,
@@ -8,7 +8,7 @@ import {
   estimatedOneRepMax,
   type ExerciseHistoryPoint,
 } from "@/lib/domain/progression";
-import { formatDate, formatKg } from "@/lib/utils";
+import { formatDate, formatKg, today } from "@/lib/utils";
 import { Sparkline } from "@/components/charts";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,11 @@ const LOAD_TABLE_WEEKS = [2, 4, 6, 9, 11, 13, 16];
  * tout seul — celui que le PDF laisse vide.
  */
 export default async function ProgressionPage() {
+  const bounds = await getProgramBounds();
+  // Sans programme importé, le tableau par semaine n'a pas d'origine : on
+  // s'aligne sur le premier lundi plutôt que d'inventer des colonnes fausses.
+  const programStart = bounds?.startDate ?? today();
+
   const tracked = await getTrackedExercises();
 
   if (tracked.length === 0) {
@@ -141,8 +146,8 @@ export default async function ProgressionPage() {
                   {LOAD_TABLE_WEEKS.map((week) => {
                     // Chaque semaine du programme démarre un lundi ; on prend la
                     // meilleure charge enregistrée dans cette fenêtre.
-                    const start = weekStartDate(week);
-                    const end = weekStartDate(week + 1);
+                    const start = weekStartDate(programStart, week);
+                    const end = weekStartDate(programStart, week + 1);
                     const inWeek = points.filter((p) => p.date >= start && p.date < end);
                     const weight = inWeek.reduce<number | null>(
                       (max, p) => (p.bestWeightKg !== null && (max === null || p.bestWeightKg > max) ? p.bestWeightKg : max),
@@ -215,8 +220,15 @@ export default async function ProgressionPage() {
   );
 }
 
-/** Lundi de la semaine N du programme (semaine 1 = 24 août 2026). */
-function weekStartDate(week: number): string {
-  const start = new Date("2026-08-24T00:00:00Z").getTime();
+/**
+ * Premier jour de la semaine N du programme.
+ *
+ * L'origine vient du programme du compte, pas d'une constante : les deux
+ * programmes ne démarrent pas le même jour, et une origine partagée décalerait
+ * toutes les colonnes de l'un d'eux — silencieusement, puisqu'il y aurait bien
+ * des charges affichées, simplement dans la mauvaise semaine.
+ */
+function weekStartDate(programStart: string, week: number): string {
+  const start = new Date(`${programStart}T00:00:00Z`).getTime();
   return new Date(start + (week - 1) * 7 * 86_400_000).toISOString().slice(0, 10);
 }

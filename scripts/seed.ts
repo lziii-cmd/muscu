@@ -17,9 +17,29 @@ import { openDatabase, q } from "./db";
 import { FOODS } from "./lib/reference-data";
 import type { ParsedProgram, ProgramDay, ProgramWeek } from "./lib/program-parser";
 
-interface SeedFile extends ParsedProgram {
+/** Un programme importable : ses semaines, ses jours, son créneau par défaut. */
+interface SeedProgram {
+  code: string;
+  name: string;
+  defaultSlot: "salle" | "matin" | "soir" | "libre";
+  weeks: ProgramWeek[];
+  days: ProgramDay[];
+}
+
+/**
+ * Fichier de seed.
+ *
+ * Les programmes sont une liste, pas deux champs nommés : le document de
+ * Nourah n'a qu'un programme à domicile, celui d'Abdou en a deux. Nommer les
+ * parties en dur obligerait à inventer une calisthénie vide pour elle.
+ */
+interface SeedFile {
   source: string;
   checkpointDates: string[];
+  programs: SeedProgram[];
+  ladders: ParsedProgram["ladders"];
+  targets: ParsedProgram["targets"];
+  testMetrics: ParsedProgram["testMetrics"];
 }
 
 function slugify(name: string): string {
@@ -124,7 +144,7 @@ async function main() {
     });
   };
 
-  for (const part of [seed.ppl, seed.calisthenie]) {
+  for (const part of seed.programs) {
     for (const day of part.days) {
       for (const session of day.sessions) {
         for (const exercise of session.exercises) {
@@ -251,7 +271,7 @@ async function main() {
   // -------------------------------------------------------------------------
   // Programmes
   // -------------------------------------------------------------------------
-  async function insertProgram(code: string, name: string, weeks: ProgramWeek[], days: ProgramDay[]) {
+  async function insertProgram({ code, name, defaultSlot, weeks, days }: SeedProgram) {
     const dates = days.map((d) => d.date).sort();
     const [{ id: programId }] = await db.query<{ id: number }>(
       `insert into programs (user_id, code, name, start_date, end_date)
@@ -275,11 +295,7 @@ async function main() {
         day.sessions.length > 0
           ? day.sessions
           : [
-              {
-                slot: code === "ppl" ? ("salle" as const) : ("matin" as const),
-                heading: "",
-                exercises: [],
-              },
+              { slot: defaultSlot, heading: "", exercises: [] },
             ];
 
       for (const session of sessions) {
@@ -315,8 +331,7 @@ async function main() {
     console.log(`  ${name} : ${days.length} jours, ${lines} lignes`);
   }
 
-  await insertProgram("ppl", "Musculation PPL -- Soir", seed.ppl.weeks, seed.ppl.days);
-  await insertProgram("calisthenie", "Calisthénie", seed.calisthenie.weeks, seed.calisthenie.days);
+  for (const program of seed.programs) await insertProgram(program);
 
   await db.close();
   console.log(`\n✓ Programme importé pour ${account.display_name}.`);

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge, Card, CardTitle, PageHeader, Stat } from "@/components/ui";
-import { getProgramOverview } from "@/lib/queries";
+import { getProgramBounds, getProgramOverview } from "@/lib/queries";
 import { cn, formatDate, today } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -9,12 +9,15 @@ export const dynamic = "force-dynamic";
  * Le programme entier, semaine par semaine et jour par jour.
  *
  * L'écran d'accueil ouvre sur aujourd'hui, ce qui donne l'impression que le
- * programme commence là. Cette page montre les 17 semaines d'un coup, avec ce
+ * programme commence là. Cette page le montre en entier d'un coup, avec ce
  * qui est prévu, ce qui est fait, et ce qui reste à saisir — chaque jour étant
  * cliquable pour l'enregistrer, même a posteriori.
  */
 export default async function ProgrammePage() {
-  const { weeks, sessions, logged } = await getProgramOverview();
+  const [{ weeks, sessions, logged }, bounds] = await Promise.all([
+    getProgramOverview(),
+    getProgramBounds(),
+  ]);
   const todayIso = today();
 
   /*
@@ -63,7 +66,7 @@ export default async function ProgrammePage() {
     <>
       <PageHeader
         title="Programme"
-        subtitle="Les 17 semaines, jour par jour. Touche n'importe quel jour pour l'enregistrer, même passé."
+        subtitle={`Les ${bounds?.weeks ?? weekNumbers.length} semaines, jour par jour. Touche n'importe quel jour pour l'enregistrer, même passé.`}
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -81,7 +84,11 @@ export default async function ProgrammePage() {
           />
         </Card>
         <Card>
-          <Stat label="Semaines" value={weekNumbers.length} hint="24 août → 20 décembre" />
+          <Stat
+            label="Semaines"
+            value={weekNumbers.length}
+            hint={bounds ? `${formatDate(bounds.startDate)} → ${formatDate(bounds.endDate)}` : undefined}
+          />
         </Card>
       </div>
 
@@ -113,9 +120,15 @@ export default async function ProgrammePage() {
 
       <div className="space-y-4">
         {weekNumbers.map((weekNumber) => {
+          /*
+           * Le bloc et la consigne sont pris sur le premier programme qui les
+           * porte, sans supposer lequel : un compte peut n'en avoir qu'un, et
+           * chercher un code en dur laissait le titre vide pour celui dont le
+           * programme ne s'appelle ni « ppl » ni « calisthenie ».
+           */
           const weekInfo = weeks.filter((w) => w.weekNumber === weekNumber);
-          const gym = weekInfo.find((w) => w.programCode === "ppl");
-          const cali = weekInfo.find((w) => w.programCode === "calisthenie");
+          const dated = weekInfo.find((w) => w.startDate) ?? weekInfo[0];
+          const instructed = weekInfo.find((w) => w.instruction) ?? dated;
 
           const dates = [
             ...new Set(sessions.filter((s) => s.weekNumber === weekNumber).map((s) => s.date)),
@@ -126,15 +139,19 @@ export default async function ProgrammePage() {
           return (
             <Card key={weekNumber} className={cn(isCurrent && "border-accent/50")}>
               <CardTitle
-                hint={gym?.startDate ? `${formatDate(gym.startDate)} → ${formatDate(gym.endDate!)}` : undefined}
+                hint={
+                  dated?.startDate
+                    ? `${formatDate(dated.startDate)} → ${formatDate(dated.endDate!)}`
+                    : undefined
+                }
                 action={isCurrent ? <Badge tone="accent">semaine en cours</Badge> : undefined}
               >
-                Semaine {weekNumber} — {gym?.blockName ?? cali?.blockName}
+                Semaine {weekNumber} — {dated?.blockName}
               </CardTitle>
 
-              {gym?.instruction ? (
+              {instructed?.instruction ? (
                 <p className="mb-3 border-l-2 border-accent/50 pl-3 text-sm text-muted">
-                  {gym.instruction}
+                  {instructed.instruction}
                 </p>
               ) : null}
 

@@ -19,7 +19,21 @@ interface DayPayload {
     blockName: string;
     instruction: string | null;
     programCode: string;
+    programName: string;
   }[];
+}
+
+/**
+ * Nom court du programme, pour une pastille.
+ *
+ * Les noms complets décrivent le programme (« Musculation & mobilité --
+ * Maison ») ; sur une pastille il ne reste de la place que pour le premier
+ * segment. Le nom vient de la base : chaque personne a les siens, et une liste
+ * de codes en dur laisserait la seconde afficher le programme de la première.
+ */
+function shortProgramName(name: string): string {
+  const first = name.split(/\s+--\s+|\s+—\s+/)[0].trim();
+  return first.length > 18 ? `${first.slice(0, 17)}…` : first;
 }
 
 /**
@@ -128,7 +142,7 @@ export function DayView({ date }: { date: string }) {
             {data.weeks.map((week) => (
               <span key={`${week.programCode}-${week.weekNumber}`} className="text-muted">
                 <span className="font-medium text-text">
-                  {week.programCode === "ppl" ? "Salle" : "Calisthénie"} · S{week.weekNumber}
+                  {shortProgramName(week.programName)} · S{week.weekNumber}
                 </span>{" "}
                 {week.blockName}
               </span>
@@ -161,7 +175,7 @@ export function DayView({ date }: { date: string }) {
       {data && data.sessions.length === 0 && state !== "chargement" ? (
         <EmptyState
           title="Aucune séance prévue ce jour"
-          detail="Le programme court du 24 août au 20 décembre 2026."
+          detail="Cette date est en dehors du programme importé."
         />
       ) : null}
 

@@ -15,7 +15,8 @@ export const dynamic = "force-dynamic";
 /**
  * Tests de force et contrôles physiques.
  *
- * Quatre samedis fixes : 19 septembre, 17 octobre, 14 novembre, 19 décembre.
+ * Les dates de contrôle viennent du programme du compte : elles ne sont pas
+ * les mêmes d'une personne à l'autre.
  * Ce sont ces tableaux qui disent si tu gagnes en force — la sensation ment,
  * les chiffres non.
  */

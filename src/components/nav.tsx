@@ -48,6 +48,23 @@ const SECONDARY = [
   { href: "/compte", label: "Profil", icon: UserRound },
 ];
 
+/**
+ * Destinations secondaires visibles pour ce compte.
+ *
+ * La calisthénie disparaît quand le programme n'en comporte pas — un onglet
+ * vide se lit comme une panne, pas comme une absence voulue.
+ */
+function secondaryFor(calisthenics: boolean) {
+  return calisthenics ? SECONDARY : SECONDARY.filter((item) => item.href !== "/calisthenie");
+}
+
+export interface NavProps {
+  /** Le compte suit-il une progression en calisthénie ? */
+  calisthenics?: boolean;
+  /** Bornes du programme du compte, affichées sous le titre. */
+  programLabel?: string;
+}
+
 function useIsActive() {
   const pathname = usePathname();
   return (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
@@ -120,18 +137,18 @@ function SyncIndicator() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ calisthenics = true, programLabel }: NavProps) {
   const isActive = useIsActive();
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col gap-6 border-r border-border bg-surface px-3 py-6 lg:flex">
       <div className="px-3">
         <p className="text-lg font-semibold tracking-tight">Muscu</p>
-        <p className="text-xs text-faint">24 août → 20 décembre 2026</p>
+        <p className="text-xs text-faint">{programLabel ?? "Aucun programme importé"}</p>
       </div>
 
       <nav className="flex flex-col gap-1" aria-label="Navigation principale">
-        {[...PRIMARY, ...SECONDARY].map(({ href, label, icon: Icon }) => (
+        {[...PRIMARY, ...secondaryFor(calisthenics)].map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -187,13 +204,13 @@ export function BottomNav() {
 }
 
 /** Accès aux sections secondaires depuis le téléphone. */
-export function SecondaryNav() {
+export function SecondaryNav({ calisthenics = true }: NavProps) {
   const isActive = useIsActive();
 
   return (
     <div className="scroll-x -mx-4 mb-4 px-4 lg:hidden">
       <div className="flex gap-2">
-        {SECONDARY.map(({ href, label, icon: Icon }) => (
+        {secondaryFor(calisthenics).map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}

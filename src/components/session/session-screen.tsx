@@ -53,6 +53,8 @@ export interface PrescribedExercise {
   perSide: boolean;
   loadRaw: string | null;
   loadKg: number | null;
+  /** Charge prescrite par haltère, telle qu'écrite dans le programme. */
+  dumbbellRaw: string | null;
   dumbbellKg: number | null;
   restSeconds: number | null;
   cue: string | null;
@@ -174,6 +176,24 @@ function initialEntry(exercise: PrescribedExercise, logged?: SessionData["logged
  * décalage sur le max vaut 1 les jours de force mais 2 le jeudi, journée de
  * volume volontairement plus légère.
  */
+/**
+ * Charge prescrite, telle qu'elle est écrite dans le programme.
+ *
+ * Deux colonnes la portent : la charge d'une barre ou d'une machine, et celle
+ * d'un haltère — « 8 kg » y signifie huit kilos dans chaque main. Longtemps
+ * seule la première était affichée, ce qui privait de repère toutes les lignes
+ * aux haltères : 167 sur le programme de salle, 128 sur celui de la maison.
+ */
+function prescribedLoad(exercise: { loadRaw: string | null; dumbbellRaw: string | null }): string {
+  const barre = exercise.loadRaw && exercise.loadRaw !== "--" ? exercise.loadRaw : "";
+  if (barre !== "") return ` · prévu ${barre}`;
+
+  const haltere = exercise.dumbbellRaw && exercise.dumbbellRaw !== "--" ? exercise.dumbbellRaw : "";
+  if (haltere !== "") return ` · prévu ${haltere} par haltère`;
+
+  return "";
+}
+
 function prescriptionLabel(exercise: PrescribedExercise, pullupMax: number): string {
   if (exercise.maxOffset !== null) {
     const reps = repsForMax(pullupMax, exercise.maxOffset);
@@ -637,9 +657,7 @@ export function SessionScreen({
                             {exercise.restSeconds !== null
                               ? ` · repos ${formatSeconds(exercise.restSeconds)}`
                               : ""}
-                            {exercise.loadRaw && exercise.loadRaw !== "--"
-                              ? ` · prévu ${exercise.loadRaw}`
-                              : ""}
+                            {prescribedLoad(exercise)}
                           </p>
                         )}
 

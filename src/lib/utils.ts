@@ -39,11 +39,30 @@ export function weekdayName(date: string): string {
   return WEEKDAYS[parseIso(date).getUTCDay()];
 }
 
+/*
+ * Abréviations usuelles en français. Tronquer mécaniquement à quatre lettres
+ * donnait « octo. » et « déce. » ; ces formes-là se lisent.
+ */
+const MONTHS_SHORT = [
+  "janv.",
+  "févr.",
+  "mars",
+  "avr.",
+  "mai",
+  "juin",
+  "juil.",
+  "août",
+  "sept.",
+  "oct.",
+  "nov.",
+  "déc.",
+];
+
 export function formatDate(date: string, options?: { withWeekday?: boolean; short?: boolean }) {
   const d = parseIso(date);
   const day = d.getUTCDate();
-  const month = MONTHS[d.getUTCMonth()];
-  const base = options?.short ? `${day} ${month.slice(0, 4)}.` : `${day} ${month}`;
+  const month = options?.short ? MONTHS_SHORT[d.getUTCMonth()] : MONTHS[d.getUTCMonth()];
+  const base = `${day} ${month}`;
   return options?.withWeekday ? `${weekdayName(date)} ${base}` : base;
 }
 

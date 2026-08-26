@@ -38,6 +38,8 @@ export interface PrescribedExercise {
   perSide: boolean;
   loadRaw: string | null;
   loadKg: number | null;
+  /** Charge prescrite par haltère, telle qu'écrite dans le programme. */
+  dumbbellRaw: string | null;
   dumbbellKg: number | null;
   restSeconds: number | null;
   cue: string | null;
@@ -141,6 +143,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
           perSide: schema.programExercises.perSide,
           loadRaw: schema.programExercises.loadRaw,
           loadKg: schema.programExercises.loadKg,
+          dumbbellRaw: schema.programExercises.dumbbellRaw,
           dumbbellKg: schema.programExercises.dumbbellKg,
           restSeconds: schema.programExercises.restSeconds,
           cue: schema.programExercises.cue,
@@ -312,6 +315,7 @@ export async function getWeekFor(date: string) {
       endDate: schema.programWeeks.endDate,
       instruction: schema.programWeeks.instruction,
       programCode: schema.programs.code,
+      programName: schema.programs.name,
     })
     .from(schema.programWeeks)
     .innerJoin(schema.programs, eq(schema.programs.id, schema.programWeeks.programId))
@@ -793,4 +797,22 @@ export async function getProgramBounds(): Promise<{
 
   if (!row?.startDate || !row.endDate || !row.weeks) return null;
   return { startDate: row.startDate, endDate: row.endDate, weeks: Number(row.weeks) };
+}
+
+/**
+ * Le compte suit-il une progression en calisthénie ?
+ *
+ * Tous les programmes n'en comportent pas : celui de Nourah est une
+ * musculation à domicile, sans échelle de progression. Afficher un onglet
+ * « Calisthénie » vide donnerait l'impression d'une fonction cassée.
+ */
+export async function hasCalisthenics(): Promise<boolean> {
+  const db = getDb();
+  const userId = await currentUserId();
+  const [row] = await db
+    .select({ id: schema.ladders.id })
+    .from(schema.ladders)
+    .where(eq(schema.ladders.userId, userId))
+    .limit(1);
+  return Boolean(row);
 }

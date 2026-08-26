@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Muscu — suivi d'entraînement",
   description:
-    "Suivi des 17 semaines de programme : séances de salle, calisthénie, diète, progression et signaux d'alerte.",
+    "Suivi de programme : séances, diète, progression et signaux d'alerte.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Muscu", statusBarStyle: "black-translucent" },
   icons: { apple: "/icons/apple-touch-icon.png" },

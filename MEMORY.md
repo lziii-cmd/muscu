@@ -4,10 +4,10 @@ Dernière mise à jour : 2026-08-26
 
 ## CONTEXTE ACTUEL
 - Où on en est : **application multi-comptes**. Le passage d'un compte unique à plusieurs comptes est terminé côté code : table `users`, `user_id` sur 17 tables, 14 index d'unicité re-cadrés sur le compte, toutes les requêtes filtrées côté serveur, écrans *Compte* et *Comptes* (administration). Typecheck, lint, 120 tests et test de fumée au vert ; build de production réussi.
-- Dernière fonctionnalité travaillée : **comptes, rôles et cloisonnement**. Trois comptes prévus : `abdou`, `nourah` (utilisateurs), `admin` (gestion des comptes uniquement, aucun accès aux données d'entraînement des autres).
-- Prochaine fonctionnalité prévue : **importer le programme de Nourah** dès qu'il est fourni (`npm run db:seed -- --user nourah --seed …`). En attendant, son compte n'a pas de programme et la page *Programme* affiche un message explicite plutôt qu'une page vide.
+- Dernière fonctionnalité travaillée : **profil** (stature, naissance, poids visé, cibles de diète, IMC et rapport tour de taille / stature, déconnexion) puis **import du programme de Nourah** depuis trois PDF convertis en Markdown.
+- Prochaine fonctionnalité prévue : à définir. Pistes ouvertes : fiches d'exécution des exercices, stockage des photos de progression.
 - Problèmes ouverts :
-  - Base Neon **migrée sans destruction** par `0002_comptes.sql` : le compte `abdou` créé sur le site déployé a été repris tel quel, avec son mot de passe et ses données. Les trois comptes existent, le programme d'Abdou est importé.
+  - Base Neon **migrée sans destruction** par `0002_comptes.sql` : le compte `abdou` créé sur le site déployé a été repris tel quel, avec son mot de passe et ses données. Les trois comptes existent ; les deux programmes sont importés (Abdou 299 séances sur 17 semaines, Nourah 124 jours sur 18 semaines).
   - Les mots de passe initiaux ont transité par la conversation : **à changer au premier passage** depuis l'écran *Compte*. Un bandeau le rappelle tant que c'est le cas.
   - Les fiches d'exécution des exercices ne sont pas importées.
   - Les photos de progression n'ont pas de stockage branché.
@@ -34,6 +34,12 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Le seed vise **un compte** et ne touche jamais au journal | Deux programmes différents doivent coexister ; un re-seed ne doit rien effacer de ce qui a été vécu | Seed global |
 | 2026-08-26 | Catalogue d'exercices et aliments partagés entre comptes | Référentiels neutres : les dupliquer n'apporterait rien et compliquerait la recherche | Table par compte |
 | 2026-08-26 | Pas d'inscription depuis l'application | Adresse publique : une inscription libre donnerait un accès à n'importe qui | Écran d'inscription |
+| 2026-08-26 | Client de base mémorisé sur `globalThis`, pas par module | Next duplique une variable de module entre le graphe des pages et celui des routes : deux instances PGlite sur un dossier mono-processus, et une écriture jamais relue | Variable de module |
+| 2026-08-26 | PDF de Nourah convertis **une fois** en Markdown | Même raison que pour le premier programme : dans un tableau Markdown les cellules sont délimitées. La conversion est relue une fois, tout le reste travaille sur du texte structuré | Parser le PDF à chaque build |
+| 2026-08-26 | Bornes de colonnes calculées **par tableau** | D'un tableau à l'autre le PDF ne place pas les colonnes aux mêmes abscisses ; des bornes globales décaleraient des valeurs sans rien signaler | Bornes globales |
+| 2026-08-26 | Le seed porte une **liste** de programmes | Nourah n'en a qu'un, Abdou deux. Des champs nommés en dur obligeraient à lui inventer une calisthénie vide | `ppl` / `calisthenie` en dur |
+| 2026-08-26 | Tout ce qui décrit le programme vient du compte | Neuf endroits portaient les dates du premier programme, dont le calcul du lundi de la semaine N — sur un programme démarrant deux jours plus tard, les colonnes de charges se décalaient sans rien afficher d'anormal | Constantes partagées |
+| 2026-08-26 | L'onglet Calisthénie disparaît sans échelle | Un onglet vide se lit comme une panne, pas comme une absence voulue | Onglet toujours visible |
 | 2026-08-26 | PGlite en repli local quand `DATABASE_URL` est absente | Permet de développer et de tester sans identifiants Neon ni Docker | Exiger Neon dès le développement |
 | 2026-08-26 | Garde « pas de base locale » sur `VERCEL`, pas sur `NODE_ENV` | Un build de production tourne aussi en local (tests) ; le vrai risque est un déploiement sans base | Garde sur NODE_ENV |
 | 2026-08-26 | **Source = `PROGRAMME-COMPLET.md`**, plus les PDF | Dans un tableau Markdown les cellules sont délimitées : les trois classes de bugs de l'extraction PDF (colonnes qui dérivent, fourchettes écrasées, consignes tronquées) n'ont plus de place où exister | Continuer à parser des PDF |
@@ -67,6 +73,9 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Alternative maison, remplacement d'un exercice, exercices à unité libre | fait | Bouton *maison* toujours offert en salle ; corde à sauter comptée en sauts |
 | 2026-08-26 | **Multi-comptes** | fait | `users`, `user_id` sur 17 tables, 14 index re-cadrés, requêtes et synchronisation filtrées |
 | 2026-08-26 | Écran *Compte* + administration des comptes | fait | Changement de son mot de passe, création/réinitialisation/suppression côté admin, bandeau « mot de passe d'origine » |
+| 2026-08-26 | **Profil** | fait | Stature, naissance, poids visé, cibles de diète, IMC et rapport tour de taille / stature, pesée du jour, déconnexion |
+| 2026-08-26 | **Programme de Nourah** | fait | 3 PDF → `PROGRAMME-NOURAH.md` → seed : 18 semaines, 124 jours, 689 lignes, 7 objectifs, 9 mesures, 4 contrôles |
+| 2026-08-26 | Programme entièrement piloté par le compte | fait | Bornes, blocs, contrôles, onglet calisthénie : plus rien en dur |
 | 2026-08-26 | Migration `0002_comptes.sql` **additive** | fait | Répétée sur base neuve et sur une copie du scénario de production avant d'être appliquée à Neon |
 | 2026-08-26 | Déploiement Neon en multi-comptes | fait | 3 comptes, programme d'Abdou importé (299 séances), aucune donnée perdue |
 
@@ -97,6 +106,10 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Serveur de test survivant entre deux exécutions | `taskkill` lancé de façon asynchrone juste avant `process.exit` | Arrêt synchrone (`spawnSync`) et arrêt sur tous les chemins de sortie, plus une garde qui refuse de démarrer si le port est pris |
 | 2026-08-26 | Build servi depuis un cache périmé | Turbopack conservait l'ancienne route d'authentification | `rm -rf .next` avant un build de vérification |
 | 2026-08-26 | Erreurs de lint React 19 | `Date.now()` pendant le rendu, `setState` synchrone dans un effet | Compteur monotone, `useSyncExternalStore`, remontage par `key` |
+| 2026-08-26 | **Écritures jamais relues par les pages, en local** | Next sépare le graphe des pages de celui des routes d'API ; le client de base mémorisé par module y était dupliqué, donc deux instances PGlite sur un dossier mono-processus. La synchronisation répondait « ok » et l'écran restait vide | Client posé sur `globalThis`, plus deux contrôles au test de fumée : une écriture doit être relue, et deux comptes ne doivent jamais voir la pesée de l'autre |
+| 2026-08-26 | Charge prescrite absente sur les exercices aux haltères | L'affichage ne lisait que `load_raw` ; les haltères vivent dans `dumbbell_raw` — 167 lignes chez Abdou, 128 chez Nourah sans repère de charge | Repli sur `dumbbell_raw`, affiché « par haltère » |
+| 2026-08-26 | Titres de semaine tronqués à la conversion | Le PDF coupe les titres longs sur deux lignes séparées par un blanc | Reprise de la ligne suivante tant qu'elle n'ouvre pas une structure connue |
+| 2026-08-26 | `.pglite-local/` entré dans un commit (29 Mo) | `.gitignore` ne couvrait que `.pglite/` et `.pglite-smoke/` | Motif élargi à `.pglite*/`, commit corrigé avant publication |
 
 ## POINTS DE VIGILANCE
 - **Le programme est daté et court.** 24 août → 20 décembre 2026. Aucune date en dur dans le code : tout vient de `program_weeks` ou de `src/lib/targets.ts`.
@@ -104,6 +117,9 @@ Dernière mise à jour : 2026-08-26
 - **Toute nouvelle requête doit être filtrée par compte.** Le point d'entrée est `currentUserId()` ; une requête qui l'oublie renvoie les données de tout le monde sans lever d'erreur. Même chose pour tout nouvel index d'unicité, qui doit inclure `user_id`.
 - **Le seed vise un compte.** `npm run db:seed -- --user X` : sans `--user`, il refuse de tourner. Il réécrit le programme de X et ne touche à rien d'autre.
 - **Une séance déjà enregistrée référence sa séance prescrite.** Re-semer le programme d'un compte qui a déjà journalisé des séances échouera sur la clé étrangère — c'est voulu, mieux vaut un refus qu'une perte.
+- **Rien du programme ne doit revenir en dur.** Dates, nombre de semaines, noms de blocs, dates de contrôle, présence de la calisthénie : tout vient du compte. Une constante réintroduite serait juste pour l'un et fausse pour l'autre, sans rien afficher d'anormal.
+- **Nourah ne fait pas de calisthénie.** Son programme est une musculation à domicile : ni échelle de progression, ni max de tractions.
+- **Deux tables de charges, pas une.** `load_raw` porte la barre ou la machine, `dumbbell_raw` l'haltère — où « 8 kg » signifie huit kilos dans *chaque* main. Les confondre double ou divise la charge réelle.
 - **Ne jamais afficher une courbe de poids seule.** En recomposition, le poids ment : la lecture croise toujours poids lissé + tour de taille + charges.
 - **La saisie doit tenir en une main, à 23h.** Cibles tactiles ≥ 44 px, clavier numérique, une charge par exercice et non par série.
 - **Le seed n'est pas une vérité absolue.** `data/seed/REVUE.md` existe pour être relu ; les valeurs prescrites restent éditables dans l'application.
@@ -137,6 +153,20 @@ Le déploiement a pris un autre chemin que prévu, et un meilleur. La remise à 
 D'où `0002_comptes.sql`, une migration **additive** : elle crée `users`, y reprend le compte décrit par `settings` avec son empreinte de mot de passe, rattache les lignes existantes à ce compte, re-cadre les index d'unicité, puis supprime `settings`. Rien n'est détruit. Elle a été répétée deux fois avant d'être appliquée : sur une base neuve (chaîne 0000 → 0001 → 0002, suivie du seed et du test de fumée) et sur une **copie du scénario de production** (ancien schéma + données représentatives), en vérifiant qu'aucune ligne ne se retrouvait sans propriétaire.
 
 Le blocage a donc produit le bon résultat : un chemin de migration réutilisable au prochain déploiement, là où la remise à zéro aurait été un geste unique et destructeur.
+
+### 2026-08-26 — cinquième partie
+
+Deux demandes, dans cet ordre : un écran de profil, puis le programme de Nourah.
+
+Le profil a servi de révélateur. En vérifiant que la pesée du jour s'enregistrait, rien ne s'affichait — alors que la synchronisation répondait « ok ». Next sépare le graphe des pages de celui des routes d'API, et le client de base mémorisé par module y était dupliqué : deux instances PGlite sur un même dossier, mono-processus. Le client vit maintenant sur `globalThis`.
+
+Ce défaut invalidait rétrospectivement la façon dont j'avais « vérifié » le cloisonnement des comptes à la partie précédente : mon contrôle cherchait une chaîne dans une page de 38 Ko et l'avait trouvée par coïncidence. Deux assertions sont entrées dans le test de fumée — une écriture doit être relue par la page qui l'affiche, et deux comptes qui se pèsent le même jour ne doivent jamais voir la pesée de l'autre. La propriété est maintenant tenue par un test qui échouerait si elle cassait.
+
+Le programme de Nourah est arrivé en trois PDF. Ils s'extrayaient proprement, donc conversion en Markdown une fois pour toutes (`npm run nourah:convert`) plutôt qu'un parseur PDF de plus. Les bornes de colonnes sont calculées tableau par tableau : le PDF ne les place pas aux mêmes abscisses d'un jour à l'autre. Résultat : 18 semaines, 124 jours, 689 lignes, zéro volume illisible, zéro nom vide.
+
+Son programme est structurellement différent : une séance par jour à domicile, pas de calisthénie, pas d'alternative maison — c'est déjà la maison — et surtout 18 semaines du 26 août au 27 décembre, là où celui d'Abdou fait 17 semaines du 24 août au 20 décembre. Neuf endroits du code portaient les dates du premier. Le plus grave n'était pas un libellé mais le calcul du lundi de la semaine N : sur un programme démarrant deux jours plus tard, toutes les colonnes de charges se seraient décalées d'une semaine, en affichant des valeurs plausibles. Tout vient désormais du compte.
+
+Un dernier défaut est apparu à l'écran : les exercices aux haltères n'affichaient aucune charge prescrite. L'affichage ne lisait que la colonne barre/machine, alors que les haltères ont la leur — 167 lignes concernées chez Abdou, 128 chez Nourah. Il était là depuis le début et personne ne l'avait vu, faute de comparer deux programmes.
 
 ### 2026-08-26 — troisième partie
 L'utilisateur a relayé une relecture ligne par ligne de mon seed contre ses sources. Les charges de musculation étaient toutes bonnes (116 occurrences vérifiées), mais la partie calisthénie avait quatre défauts, dont deux sérieux. Je les ai vérifiés un par un contre le document plutôt que de les appliquer de confiance : **tous fondés**.

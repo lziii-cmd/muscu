@@ -54,7 +54,7 @@ export async function getSession(): Promise<IronSession<SessionData>> {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      // Le programme dure 17 semaines : inutile de redemander le mot de passe
+      // Un programme dure quelques mois : inutile de redemander le mot de passe
       // chaque semaine sur un téléphone personnel.
       maxAge: 60 * 60 * 24 * 180,
     },
