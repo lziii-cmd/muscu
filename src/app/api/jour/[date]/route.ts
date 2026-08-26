@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDay, getPullupMax, getWeekFor } from "@/lib/queries";
+import { getAllExercises, getDay, getPullupMax, getWeekFor } from "@/lib/queries";
 import { isAuthenticated } from "@/lib/auth/session";
 
 /**
@@ -24,14 +24,17 @@ export async function GET(_request: Request, context: RouteContext<"/api/jour/[d
     return NextResponse.json({ error: "date invalide" }, { status: 400 });
   }
 
-  const [sessions, weeks, pullupMax] = await Promise.all([
+  // Le catalogue d'exercices accompagne la journée : le sélecteur d'ajout doit
+  // fonctionner hors-ligne, et il est mis en cache avec le reste.
+  const [sessions, weeks, pullupMax, exercises] = await Promise.all([
     getDay(date),
     getWeekFor(date),
     getPullupMax(),
+    getAllExercises(),
   ]);
 
   return NextResponse.json(
-    { date, sessions, weeks, pullupMax },
+    { date, sessions, weeks, pullupMax, exercises },
     {
       headers: {
         // Le référentiel du jour ne change pas ; les séances saisies, si.

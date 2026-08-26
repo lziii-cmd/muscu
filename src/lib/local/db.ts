@@ -43,7 +43,8 @@ export type MutationKind =
   | "sleep.upsert"
   | "pain.add"
   | "test.upsert"
-  | "ladder.upsert";
+  | "ladder.upsert"
+  | "exercise.create";
 
 export interface OutboxEntry {
   /** Identifiant généré côté client : rend le rejeu idempotent. */

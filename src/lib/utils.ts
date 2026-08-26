@@ -96,6 +96,7 @@ export const SLOT_LABELS = {
   salle: "Salle",
   matin: "Matin",
   soir: "Soir",
+  libre: "Libre",
 } as const;
 
 export type Slot = keyof typeof SLOT_LABELS;

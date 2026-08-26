@@ -5,7 +5,8 @@ Dernière mise à jour : 2026-08-26
 ## CONTEXTE ACTUEL
 - Où on en est : **application reconstruite sur `PROGRAMME-COMPLET.md`** (déposé le 26/08 à 14:59), qui se déclare source de vérité et remplace les PDF. 120 tests, test de fumée et build au vert. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 29 tables, référentiel des 17 semaines importé. Typecheck, lint, 116 tests unitaires et test de fumée passent tous. Build en 12,6 s.
 - Dernière fonctionnalité travaillée : intégration des **alternatives maison** (séance déplaçable plutôt que ratée) et reprise complète du seed sur les nouveaux documents. Avant : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
-- Prochaine fonctionnalité prévue : **push GitHub puis déploiement Vercel**. La base Neon est créée (projet « Muscu », région AWS Europe Central 1 Francfort, Postgres 18) ; `DATABASE_URL` reste à renseigner côté Vercel et en local.
+- **Prochaine fonctionnalité demandée : le multi-utilisateur** (deux comptes, chacun son programme). Le second programme n'est pas encore fourni. C'est structurant : `users`, `user_id` sur tout le journal et sur `programs`, portée des requêtes.
+- Prochaine étape technique : **push GitHub puis déploiement Vercel**. La base Neon est créée (projet « Muscu », région AWS Europe Central 1 Francfort, Postgres 18) ; `DATABASE_URL` reste à renseigner côté Vercel et en local.
 - Problèmes ouverts :
   - Aucun identifiant Neon fourni à ce jour : tout a été vérifié sur PGlite en local.
   - Les 5 PDF à la racine sont **superflus** depuis l'arrivée du Markdown : à supprimer sur accord de l'utilisateur.
@@ -37,6 +38,9 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Extraction PDF en `pdftotext -table` et non `-layout` *(étape intermédiaire, abandonnée)* | `-table` préserve l'alignement des lignes ; `-layout` faisait dériver les colonnes de droite d'une ligne, imposant des heuristiques d'appariement fragiles — et incapables de lire la colonne « Alternative maison », qui contient elle-même des « 3 × 12 » | `-layout` + appariement par index |
 | 2026-08-26 | Semaine 1 du PPL **plus** transcrite à la main | En `-table` ses tableaux sont lisibles comme les autres ; la transcription manuelle était une dette de maintenance | Garder l'override |
 | 2026-08-26 | Échelles, objectifs et métriques de test **parsés** au lieu d'être transcrits | Ils ont changé entre deux révisions du document sans que rien ne le signale — exactement le risque à éviter | Retranscrire à la main |
+| 2026-08-26 | Le bouton maison est toujours disponible sur une séance de salle | Le lieu où l'on s'entraîne est un fait, il ne dépend pas de la présence d'une colonne dans le document — la semaine 1 n'en a pas | N'afficher le bouton que si une alternative existe |
+| 2026-08-26 | Remplacer un exercice = marquer l'original non fait + ajouter le substitut | Réutilise les mécanismes existants, garde la trace de ce qui était prévu, aucun schéma supplémentaire | Colonne « remplacé par » |
+| 2026-08-26 | `measure_label` libre sur l'exercice | Une corde à sauter se compte en sauts, une course en mètres ; forcer « répétitions » rendrait la saisie absurde | Enum figée |
 | 2026-08-26 | Séances maison exclues de la progression en charge | Consigne explicite du document : « ne compare pas ses performances à celles de la salle, ce sont deux échelles différentes » | Tout mélanger |
 | 2026-08-26 | `react/no-unescaped-entities` désactivée | Interface intégralement en français, l'apostrophe est un caractère courant ; React échappe déjà le JSX | Échapper chaque apostrophe |
 
@@ -78,6 +82,9 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Type de séance tronqué (« LEGS A » → « LEGS ») | `-table` insère des espaces à l'intérieur des titres ; ma découpe sur « 2 espaces ou plus » coupait au mauvais endroit | Normalisation des espaces au lieu d'une découpe |
 | 2026-08-26 | Titre de section absorbé par la dernière ligne d'un tableau | Bloc borné uniquement par les titres de jour et de semaine | Bornes élargies aux titres de section et intertitres |
 | 2026-08-26 | Parseur ancré sur le sommaire au lieu du corps | En `-table` tout est indenté : l'indentation ne distingue plus sommaire et corps | Repères pris sur la **dernière** occurrence |
+| 2026-08-26 | **Le test de fumée a écrit dans la base Neon** | Supprimer `DATABASE_URL` du processus parent ne suffit pas : chaque enfant recharge `.env.local` par dotenv et y retrouve l'URL | Variables mises à la chaîne vide et transmises telles quelles aux enfants — dotenv n'écrase jamais une variable déjà présente. Dégât constaté : un mot de passe aléatoire posé dans `settings`, effacé depuis ; aucune donnée utilisateur perdue |
+| 2026-08-26 | Serveur de test survivant entre deux exécutions | `taskkill` lancé de façon asynchrone juste avant `process.exit` | Arrêt synchrone (`spawnSync`) et arrêt sur tous les chemins de sortie, plus une garde qui refuse de démarrer si le port est pris |
+| 2026-08-26 | Build servi depuis un cache périmé | Turbopack conservait l'ancienne route d'authentification | `rm -rf .next` avant un build de vérification |
 | 2026-08-26 | Erreurs de lint React 19 | `Date.now()` pendant le rendu, `setState` synchrone dans un effet | Compteur monotone, `useSyncExternalStore`, remontage par `key` |
 
 ## POINTS DE VIGILANCE

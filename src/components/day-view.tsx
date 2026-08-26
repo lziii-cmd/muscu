@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, CloudOff, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, CloudOff, Plus, RefreshCw } from "lucide-react";
 import { SessionScreen, type SessionData } from "@/components/session/session-screen";
+import type { ExerciseOption } from "@/components/session/exercise-picker";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { addDays, formatDate, today as todayIso } from "@/lib/utils";
 import { cacheSession, readCachedSession } from "@/lib/local/db";
@@ -11,6 +12,7 @@ import { cacheSession, readCachedSession } from "@/lib/local/db";
 interface DayPayload {
   date: string;
   pullupMax: number;
+  exercises: ExerciseOption[];
   sessions: SessionData[];
   weeks: {
     weekNumber: number;
@@ -31,6 +33,8 @@ interface DayPayload {
 export function DayView({ date }: { date: string }) {
   const [data, setData] = useState<DayPayload | null>(null);
   const [state, setState] = useState<"chargement" | "en_ligne" | "cache" | "vide">("chargement");
+  /** Séance libre ouverte à la saisie, tant qu'elle n'est pas enregistrée. */
+  const [freeSession, setFreeSession] = useState(false);
 
   const load = useCallback(async () => {
     // L'état initial est déjà « chargement » : le repasser ici déclencherait un
@@ -66,6 +70,9 @@ export function DayView({ date }: { date: string }) {
 
   const isToday = date === todayIso();
   const isPast = date < todayIso();
+  // Une séance libre déjà enregistrée revient dans la liste : inutile d'en
+  // proposer une seconde.
+  const hasFreeSession = (data?.sessions ?? []).some((session) => session.slot === "libre");
 
   return (
     <>
@@ -166,9 +173,48 @@ export function DayView({ date }: { date: string }) {
             session={session}
             isPast={isPast}
             pullupMax={data.pullupMax ?? 3}
+            exercises={data.exercises ?? []}
             onSaved={load}
           />
         ))}
+
+        {data && state !== "chargement" ? (
+          hasFreeSession || freeSession ? (
+            !hasFreeSession ? (
+              <SessionScreen
+                key={`${date}-libre`}
+                date={date}
+                session={{
+                  slot: "libre",
+                  programSessionId: null,
+                  weekNumber: null,
+                  label: "Entraînement libre",
+                  heading: null,
+                  isRestDay: false,
+                  isTestDay: false,
+                  prescribed: [],
+                  logged: null,
+                }}
+                isPast={isPast}
+                pullupMax={data.pullupMax ?? 3}
+                exercises={data.exercises ?? []}
+                onSaved={() => {
+                  setFreeSession(false);
+                  void load();
+                }}
+              />
+            ) : null
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFreeSession(true)}
+              className="tap flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border-strong py-4 text-sm text-muted"
+            >
+              <Plus size={16} aria-hidden />
+              Ajouter un entraînement libre
+            </button>
+          )
+        ) : null}
       </div>
     </>
   );

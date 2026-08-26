@@ -57,7 +57,8 @@ jalonnés, 11 métriques de test, 14 aliments du marché local, et les 17 semain
 npm run dev
 ```
 
-Au premier lancement, l'écran de connexion propose de **créer** le mot de passe. Un seul compte.
+Au premier lancement, l'écran de connexion propose de **créer le compte** : identifiant et mot de
+passe.
 
 ---
 
@@ -98,7 +99,7 @@ journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 | `npm run db:seed` | Importe le référentiel |
 | `npm run db:reset` | **Destructif** — vide le schéma |
 | `npm run seed:build` | Reconstruit le seed depuis `PROGRAMME-COMPLET.md` |
-| `npm run smoke` | Test de fumée autonome (après `npm run build`) |
+| `npm run smoke` | Test de fumée autonome (après `npm run build`) — tourne toujours sur PGlite, jamais sur Neon |
 | `npm run db:reset-password` | Efface le mot de passe local |
 
 ---
@@ -139,6 +140,22 @@ plus cher :
 - **moyenne mobile 7 jours** et verdict de recomposition croisant poids, tour de taille et charges ;
 - **quatre signaux d'alerte** : douleur articulaire au-delà de 48 h, baisse de performance sur deux
   séances, sommeil dégradé, fréquence cardiaque de repos élevée.
+
+### Saisir ce qui s'est réellement passé
+
+Le programme prescrit, la réalité s'en écarte. L'application couvre les trois écarts courants :
+
+| Situation | Ce que tu fais |
+|---|---|
+| Salle fermée, imprévu | Bouton **maison** sur la séance : chaque exercice affiche son équivalent domicile |
+| Machine occupée | **Remplacer** : l'exercice prévu passe en « non fait », le substitut s'ajoute |
+| Entraînement en plus | **Ajouter un exercice**, choisi dans le catalogue ou créé à la volée |
+| Activité hors musculation | Créer l'exercice avec **son unité** — sauts, mètres, minutes |
+| Jour sans programme | **Entraînement libre**, avec son titre |
+| Séance oubliée | N'importe quel jour passé s'ouvre depuis **Programme** ou le calendrier |
+
+Une séance maison compte pour l'assiduité mais pas pour la progression en charge : le document est
+explicite, les deux échelles ne se comparent pas.
 
 ### Le hors-ligne est une décision d'architecture, pas une option
 

@@ -1,8 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Clock, Dumbbell, History, Home, Timer, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Clock,
+  Dumbbell,
+  History,
+  Home,
+  Plus,
+  Repeat,
+  Timer,
+  Trash2,
+  X,
+} from "lucide-react";
 import { RestTimer } from "./rest-timer";
+import { ExercisePicker, type ExerciseOption } from "./exercise-picker";
 import { Badge, Card } from "@/components/ui";
 import { cn, formatDuration, formatKg, formatSeconds, SLOT_LABELS, type Slot } from "@/lib/utils";
 import { enqueue } from "@/lib/local/db";
@@ -60,6 +73,7 @@ export interface SessionData {
     id: number;
     status: string;
     location: string;
+    title: string | null;
     durationSeconds: number | null;
     rpe: number | null;
     note: string | null;
@@ -76,11 +90,34 @@ export interface SessionData {
       holdSecondsDone: number | null;
       machineNote: string | null;
       note: string | null;
+      isExtra: boolean;
+      name: string;
+      measureLabel: string;
     }[];
   } | null;
 }
 
 type LoadUnit = "barre_machine" | "kg_par_haltere" | "poids_du_corps";
+
+/**
+ * Ligne ajoutée à la séance en dehors du programme : entraînement
+ * supplémentaire, ou substitut d'un exercice dont la machine était occupée.
+ */
+interface ExtraLine {
+  key: string;
+  exerciseId: number;
+  name: string;
+  measureLabel: string;
+  unit: "reps" | "seconds";
+  /** Renseigné quand cette ligne remplace un exercice du programme. */
+  replacesLabel: string | null;
+  done: boolean;
+  weightKg: string;
+  loadUnit: LoadUnit;
+  setsDone: string;
+  repsDone: string;
+  restSeconds: string;
+}
 
 interface EntryState {
   done: boolean;
@@ -164,6 +201,7 @@ export function SessionScreen({
   session,
   isPast,
   pullupMax,
+  exercises,
   onSaved,
 }: {
   date: string;
@@ -171,6 +209,8 @@ export function SessionScreen({
   isPast: boolean;
   /** Max de tractions courant, pour résoudre les prescriptions « max − N ». */
   pullupMax: number;
+  /** Catalogue complet, pour ajouter ou substituer un exercice. */
+  exercises: ExerciseOption[];
   onSaved?: () => void;
 }) {
   const [entries, setEntries] = useState<Record<number, EntryState>>(() =>
@@ -179,6 +219,26 @@ export function SessionScreen({
     ),
   );
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [extras, setExtras] = useState<ExtraLine[]>(() =>
+    (session.logged?.exercises ?? [])
+      .filter((entry) => entry.isExtra)
+      .map((entry, index) => ({
+        key: `saved-${entry.exerciseId}-${index}`,
+        exerciseId: entry.exerciseId,
+        name: entry.name ?? "Exercice",
+        measureLabel: entry.measureLabel ?? "reps",
+        unit: "reps" as const,
+        replacesLabel: null,
+        done: entry.done,
+        weightKg: entry.weightKg === null ? "" : String(entry.weightKg),
+        loadUnit: (entry.loadUnit as LoadUnit) ?? "poids_du_corps",
+        setsDone: entry.setsDone === null ? "" : String(entry.setsDone),
+        repsDone: entry.repsDone === null ? "" : String(entry.repsDone),
+        restSeconds: "",
+      })),
+  );
+  /** Ouvert pour un ajout simple, ou pour remplacer l'exercice ciblé. */
+  const [picker, setPicker] = useState<{ replacing: number | null } | null>(null);
   // La clé change à chaque nouveau repos : le chronomètre est remonté proprement.
   const [rest, setRest] = useState<{ seconds: number; label: string; key: number } | null>(null);
   const [elapsed, setElapsed] = useState(session.logged?.durationSeconds ?? 0);
@@ -195,6 +255,8 @@ export function SessionScreen({
   );
   const [rpe, setRpe] = useState<number | null>(session.logged?.rpe ?? null);
   const [note, setNote] = useState(session.logged?.note ?? "");
+  /** Titre d'une séance libre : « Corde à sauter », « Football », … */
+  const [title, setTitle] = useState(session.logged?.title ?? "");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const startRef = useRef<number | null>(null);
@@ -235,8 +297,46 @@ export function SessionScreen({
     }
   };
 
-  const doneCount = session.prescribed.filter((e) => entries[e.id]?.done).length;
-  const total = session.prescribed.length;
+  const addExercise = (option: ExerciseOption, replacing: number | null) => {
+    const replaced = replacing === null ? null : session.prescribed.find((e) => e.id === replacing);
+
+    // Remplacer, c'est marquer l'original non fait avec son motif, puis ajouter
+    // le substitut. La séance garde ainsi la trace de ce qui était prévu.
+    if (replaced) {
+      update(replaced.id, { done: false, skipReason: "machine_occupee" });
+    }
+
+    setExtras((current) => [
+      ...current,
+      {
+        key: `new-${current.length}-${option.id}`,
+        exerciseId: option.id,
+        name: option.name,
+        measureLabel: option.measureLabel,
+        unit: option.unit,
+        replacesLabel: replaced ? replaced.name : null,
+        done: false,
+        weightKg: "",
+        loadUnit: "poids_du_corps",
+        setsDone: "3",
+        repsDone: "",
+        restSeconds: "",
+      },
+    ]);
+    setPicker(null);
+    if (!running) setRunning(true);
+  };
+
+  const updateExtra = (key: string, patch: Partial<ExtraLine>) =>
+    setExtras((current) => current.map((e) => (e.key === key ? { ...e, ...patch } : e)));
+
+  const removeExtra = (key: string) =>
+    setExtras((current) => current.filter((e) => e.key !== key));
+
+  const doneCount =
+    session.prescribed.filter((e) => entries[e.id]?.done).length +
+    extras.filter((e) => e.done).length;
+  const total = session.prescribed.length + extras.length;
 
   const late = useMemo(() => lateLogging(date, new Date().toISOString()), [date]);
 
@@ -282,11 +382,13 @@ export function SessionScreen({
         programSessionId: session.programSessionId,
         status,
         location,
+        title: session.slot === "libre" ? title.trim() || "Entraînement libre" : null,
         durationSeconds: elapsed > 0 ? elapsed : null,
         rpe,
         note: note.trim() === "" ? null : note.trim(),
         loggedAt: new Date().toISOString(),
-        exercises: session.prescribed.map((exercise) => {
+        exercises: [
+          ...session.prescribed.map((exercise) => {
           const entry = entries[exercise.id];
           const weight = entry.weightKg === "" ? null : Number(entry.weightKg.replace(",", "."));
           return {
@@ -295,6 +397,7 @@ export function SessionScreen({
             orderIndex: exercise.orderIndex,
             orderLabel: exercise.orderLabel,
             done: entry.done,
+            isExtra: false,
             skipReason: entry.done || entry.skipReason === "" ? null : entry.skipReason,
             weightKg: entry.loadUnit === "poids_du_corps" ? null : Number.isFinite(weight) ? weight : null,
             loadUnit: entry.loadUnit,
@@ -305,6 +408,30 @@ export function SessionScreen({
             note: null,
           };
         }),
+          // Lignes ajoutées : entraînement supplémentaire ou substitut d'un
+          // exercice indisponible. Elles portent `isExtra` pour ne pas être
+          // comparées à une prescription qui n'existe pas.
+          ...extras.map((extra, index) => {
+            const weight = extra.weightKg === "" ? null : Number(extra.weightKg.replace(",", "."));
+            return {
+              programExerciseId: null,
+              exerciseId: extra.exerciseId,
+              orderIndex: session.prescribed.length + index,
+              orderLabel: null,
+              done: extra.done,
+              isExtra: true,
+              skipReason: null,
+              weightKg:
+                extra.loadUnit === "poids_du_corps" || !Number.isFinite(weight) ? null : weight,
+              loadUnit: extra.loadUnit,
+              machineNote: null,
+              setsDone: extra.setsDone === "" ? null : Number(extra.setsDone),
+              repsDone: extra.repsDone === "" ? null : Number(extra.repsDone),
+              holdSecondsDone: null,
+              note: extra.replacesLabel ? `Remplace : ${extra.replacesLabel}` : null,
+            };
+          }),
+        ],
       });
       setSavedAt(new Date().toISOString());
       onSaved?.();
@@ -335,7 +462,9 @@ export function SessionScreen({
     return (
       <Card>
         <div className="flex items-center gap-3">
-          <Badge tone={session.slot}>{SLOT_LABELS[session.slot]}</Badge>
+          <Badge tone={session.slot === "libre" ? "accent" : session.slot}>
+            {SLOT_LABELS[session.slot]}
+          </Badge>
           <p className="text-sm text-muted">Repos prévu. C'est une consigne, pas une option.</p>
         </div>
       </Card>
@@ -377,8 +506,20 @@ export function SessionScreen({
     <>
       <Card className="p-0">
         <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3 sm:px-5">
-          <Badge tone={session.slot}>{SLOT_LABELS[session.slot]}</Badge>
-          <h2 className="min-w-0 flex-1 truncate font-semibold">{session.label}</h2>
+          <Badge tone={session.slot === "libre" ? "accent" : (session.slot as "salle" | "matin" | "soir")}>
+            {SLOT_LABELS[session.slot]}
+          </Badge>
+          {session.slot === "libre" ? (
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Entraînement libre"
+              aria-label="Titre de la séance"
+              className="tap min-w-0 flex-1 rounded-lg border border-border bg-raised px-2 font-semibold outline-none focus:border-accent"
+            />
+          ) : (
+            <h2 className="min-w-0 flex-1 truncate font-semibold">{session.label}</h2>
+          )}
 
           {session.weekNumber ? <Badge>S{session.weekNumber}</Badge> : null}
 
@@ -388,7 +529,7 @@ export function SessionScreen({
             </Badge>
           ) : null}
 
-          {session.prescribed.some((exercise) => exercise.homeAlternative) ? (
+          {session.slot === "salle" || session.slot === "libre" ? (
             <button
               type="button"
               onClick={() => setLocation((value) => (value === "salle" ? "maison" : "salle"))}
@@ -429,6 +570,14 @@ export function SessionScreen({
                   près de l'échec — contrairement à la salle où tu gardes 2 reps en réserve. Ces
                   performances ne comptent pas dans ta progression en charge.
                 </p>
+                {session.prescribed.every((exercise) => !exercise.homeAlternative) ? (
+                  <p className="mt-2 text-muted">
+                    Le programme ne fournit pas d'équivalent maison pour cette semaine — la colonne
+                    commence en semaine 2. Adapte au poids du corps : pompes pour la poussée,
+                    traction ou traction australienne pour le tirage, fentes et squats une jambe pour
+                    les jambes.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -473,10 +622,14 @@ export function SessionScreen({
                           {isSuperset ? <Badge tone="accent">superset {exercise.supersetGroup}</Badge> : null}
                         </div>
 
-                        {location === "maison" && exercise.homeAlternative ? (
+                        {location === "maison" ? (
                           <p className="mt-0.5 flex items-start gap-1.5 text-sm text-soir">
                             <Home size={13} className="mt-0.5 shrink-0" aria-hidden />
-                            {exercise.homeAlternative}
+                            {exercise.homeAlternative || (
+                              <span className="text-faint">
+                                Pas d'équivalent fourni — adapte au poids du corps
+                              </span>
+                            )}
                           </p>
                         ) : (
                           <p className="mt-0.5 text-sm text-faint">
@@ -577,6 +730,21 @@ export function SessionScreen({
                               </label>
                             )}
 
+                            <div className="sm:col-span-2">
+                              <button
+                                type="button"
+                                onClick={() => setPicker({ replacing: exercise.id })}
+                                className="tap flex items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-muted"
+                              >
+                                <Repeat size={14} aria-hidden />
+                                Remplacer — machine occupée
+                              </button>
+                              <p className="mt-1 text-xs text-faint">
+                                L'exercice prévu sera marqué non fait, et le substitut ajouté à la
+                                séance.
+                              </p>
+                            </div>
+
                             {exercise.equipment === "machine" ? (
                               <label className="text-sm sm:col-span-2">
                                 <span className="text-faint">
@@ -620,6 +788,137 @@ export function SessionScreen({
               })}
             </ul>
 
+            {extras.length > 0 ? (
+              <ul className="divide-y divide-border border-t border-border">
+                {extras.map((extra) => (
+                  <li key={extra.key} className="px-4 py-3 sm:px-5">
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => updateExtra(extra.key, { done: !extra.done })}
+                        aria-pressed={extra.done}
+                        aria-label={`${extra.name} : ${extra.done ? "fait" : "à faire"}`}
+                        className={cn(
+                          "tap mt-0.5 grid size-11 shrink-0 place-items-center rounded-xl border-2 transition-colors",
+                          extra.done
+                            ? "border-success bg-success/20 text-success"
+                            : "border-border-strong text-faint",
+                        )}
+                      >
+                        {extra.done ? <Check size={22} /> : <Plus size={18} />}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className={cn("font-medium", extra.done && "text-muted line-through")}>
+                            {extra.name}
+                          </span>
+                          <Badge tone={extra.replacesLabel ? "warning" : "accent"}>
+                            {extra.replacesLabel ? "remplace" : "en plus"}
+                          </Badge>
+                        </div>
+
+                        {extra.replacesLabel ? (
+                          <p className="mt-0.5 text-xs text-faint">
+                            À la place de « {extra.replacesLabel} »
+                          </p>
+                        ) : null}
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <label className="flex items-center gap-1.5">
+                            <span className="sr-only">Séries pour {extra.name}</span>
+                            <input
+                              inputMode="numeric"
+                              value={extra.setsDone}
+                              onChange={(event) =>
+                                updateExtra(extra.key, { setsDone: event.target.value })
+                              }
+                              placeholder="séries"
+                              className="tap w-16 rounded-lg border border-border bg-raised px-2 text-center tabular-nums outline-none focus:border-accent"
+                            />
+                            <span className="text-sm text-faint">×</span>
+                          </label>
+
+                          <label className="flex items-center gap-1.5">
+                            <span className="sr-only">
+                              {extra.measureLabel} pour {extra.name}
+                            </span>
+                            <input
+                              inputMode="numeric"
+                              value={extra.repsDone}
+                              onChange={(event) =>
+                                updateExtra(extra.key, { repsDone: event.target.value })
+                              }
+                              placeholder={extra.measureLabel}
+                              className="tap w-20 rounded-lg border border-border bg-raised px-2 text-center tabular-nums outline-none focus:border-accent"
+                            />
+                            <span className="text-sm text-faint">{extra.measureLabel}</span>
+                          </label>
+
+                          {extra.loadUnit !== "poids_du_corps" ? (
+                            <label className="flex items-center gap-1.5">
+                              <span className="sr-only">Charge pour {extra.name}</span>
+                              <input
+                                inputMode="decimal"
+                                value={extra.weightKg}
+                                onChange={(event) =>
+                                  updateExtra(extra.key, { weightKg: event.target.value })
+                                }
+                                placeholder="kg"
+                                className="tap w-20 rounded-lg border border-border bg-raised px-2 text-center tabular-nums outline-none focus:border-accent"
+                              />
+                              <span className="text-sm text-faint">kg</span>
+                            </label>
+                          ) : null}
+
+                          <select
+                            value={extra.loadUnit}
+                            onChange={(event) =>
+                              updateExtra(extra.key, { loadUnit: event.target.value as LoadUnit })
+                            }
+                            aria-label={`Type de charge pour ${extra.name}`}
+                            className="tap rounded-lg border border-border bg-raised px-2 text-sm text-muted outline-none focus:border-accent"
+                          >
+                            <option value="poids_du_corps">poids du corps</option>
+                            <option value="barre_machine">barre / machine</option>
+                            <option value="kg_par_haltere">par haltère</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => removeExtra(extra.key)}
+                            className="tap grid place-items-center rounded-lg text-faint hover:text-danger"
+                            aria-label={`Retirer ${extra.name}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <div className="border-t border-border px-4 py-3 sm:px-5">
+              {picker ? (
+                <ExercisePicker
+                  exercises={exercises}
+                  onPick={(option) => addExercise(option, picker.replacing)}
+                  onClose={() => setPicker(null)}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPicker({ replacing: null })}
+                  className="tap flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong text-sm text-muted"
+                >
+                  <Plus size={16} aria-hidden />
+                  Ajouter un exercice
+                </button>
+              )}
+            </div>
+
             <footer className="flex flex-wrap gap-2 border-t border-border px-4 py-3 sm:px-5">
               <button
                 type="button"
@@ -645,6 +944,7 @@ export function SessionScreen({
             advices={advices}
             late={isPast}
             location={location}
+            extras={extras}
             saving={saving}
             onBack={() => setView("saisie")}
             onSave={() => save(doneCount === total ? "done" : "partial")}
@@ -721,6 +1021,7 @@ function Summary({
   advices,
   late,
   location,
+  extras,
   saving,
   onBack,
   onSave,
@@ -737,6 +1038,7 @@ function Summary({
   advices: { exercise: PrescribedExercise; advice: { message: string } }[];
   late: boolean;
   location: "salle" | "maison";
+  extras: ExtraLine[];
   saving: boolean;
   onBack: () => void;
   onSave: () => void;
@@ -793,6 +1095,30 @@ function Summary({
             </li>
           );
         })}
+        {extras.map((extra) => (
+          <li key={extra.key} className="flex items-center gap-3 px-3 py-2 text-sm">
+            <span
+              className={cn(
+                "grid size-5 shrink-0 place-items-center rounded",
+                extra.done ? "bg-success/20 text-success" : "bg-raised text-faint",
+              )}
+              aria-hidden
+            >
+              {extra.done ? <Check size={13} /> : <X size={13} />}
+            </span>
+            <span className={cn("min-w-0 flex-1 truncate", !extra.done && "text-faint")}>
+              {extra.name}
+              <span className="ml-1 text-xs text-faint">
+                {extra.replacesLabel ? "· remplace" : "· en plus"}
+              </span>
+            </span>
+            <span className="shrink-0 tabular-nums text-muted">
+              {extra.setsDone && extra.repsDone
+                ? `${extra.setsDone} × ${extra.repsDone} ${extra.measureLabel}`
+                : "—"}
+            </span>
+          </li>
+        ))}
       </ul>
 
       {advices.length > 0 ? (

@@ -52,7 +52,11 @@ export interface LoggedExercise {
   setsDone: number | null;
   repsDone: number | null;
   holdSecondsDone: number | null;
+  isExtra: boolean;
   note: string | null;
+  /** Nom de l'exercice, indispensable pour les lignes ajoutées hors programme. */
+  name: string;
+  measureLabel: string;
 }
 
 export interface DaySession {
@@ -68,6 +72,7 @@ export interface DaySession {
     id: number;
     status: string;
     location: string;
+    title: string | null;
     startedAt: string | null;
     endedAt: string | null;
     durationSeconds: number | null;
@@ -147,13 +152,34 @@ export async function getDay(date: string): Promise<DaySession[]> {
   const loggedIds = loggedSessions.map((s) => s.id);
   const loggedExercises = loggedIds.length
     ? await db
-        .select()
+        .select({
+          id: schema.sessionExercises.id,
+          sessionId: schema.sessionExercises.sessionId,
+          programExerciseId: schema.sessionExercises.programExerciseId,
+          exerciseId: schema.sessionExercises.exerciseId,
+          orderIndex: schema.sessionExercises.orderIndex,
+          done: schema.sessionExercises.done,
+          isExtra: schema.sessionExercises.isExtra,
+          skipReason: schema.sessionExercises.skipReason,
+          weightKg: schema.sessionExercises.weightKg,
+          loadUnit: schema.sessionExercises.loadUnit,
+          machineNote: schema.sessionExercises.machineNote,
+          setsDone: schema.sessionExercises.setsDone,
+          repsDone: schema.sessionExercises.repsDone,
+          holdSecondsDone: schema.sessionExercises.holdSecondsDone,
+          note: schema.sessionExercises.note,
+          // Une ligne ajoutée hors programme n'a pas de prescription pour
+          // fournir son libellé : on le prend sur l'exercice lui-même.
+          name: schema.exercises.name,
+          measureLabel: schema.exercises.measureLabel,
+        })
         .from(schema.sessionExercises)
+        .innerJoin(schema.exercises, eq(schema.exercises.id, schema.sessionExercises.exerciseId))
         .where(inArray(schema.sessionExercises.sessionId, loggedIds))
         .orderBy(asc(schema.sessionExercises.orderIndex))
     : [];
 
-  return prescribedSessions.map((session) => {
+  const mapped = prescribedSessions.map((session) => {
     const logged = loggedSessions.find((l) => l.slot === session.slot) ?? null;
 
     return {
@@ -177,6 +203,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
             id: logged.id,
             status: logged.status,
             location: logged.location,
+            title: logged.title,
             startedAt: logged.startedAt?.toISOString() ?? null,
             endedAt: logged.endedAt?.toISOString() ?? null,
             durationSeconds: logged.durationSeconds,
@@ -200,12 +227,69 @@ export async function getDay(date: string): Promise<DaySession[]> {
                 setsDone: e.setsDone,
                 repsDone: e.repsDone,
                 holdSecondsDone: e.holdSecondsDone,
+                isExtra: e.isExtra,
                 note: e.note,
+                name: e.name,
+                measureLabel: e.measureLabel,
               })),
           }
         : null,
     };
   });
+
+  /*
+   * Séances enregistrées sans prescription : entraînements ajoutés en dehors du
+   * programme. Elles doivent apparaître dans la journée comme les autres, sinon
+   * elles seraient invisibles une fois saisies.
+   */
+  const extras = loggedSessions
+    .filter((logged) => !prescribedSessions.some((p) => p.slot === logged.slot))
+    .map((logged) => ({
+      slot: logged.slot as Slot,
+      programSessionId: null,
+      weekNumber: null,
+      label: logged.title ?? "Entraînement libre",
+      heading: null,
+      isRestDay: false,
+      isTestDay: false,
+      prescribed: [] as PrescribedExercise[],
+      logged: {
+        id: logged.id,
+        status: logged.status,
+        location: logged.location,
+        title: logged.title,
+        startedAt: logged.startedAt?.toISOString() ?? null,
+        endedAt: logged.endedAt?.toISOString() ?? null,
+        durationSeconds: logged.durationSeconds,
+        rpe: logged.rpe,
+        note: logged.note,
+        missedReason: logged.missedReason,
+        missedNote: logged.missedNote,
+        loggedAt: logged.loggedAt?.toISOString() ?? null,
+        exercises: loggedExercises
+          .filter((e) => e.sessionId === logged.id)
+          .map((e) => ({
+            id: e.id,
+            programExerciseId: e.programExerciseId,
+            exerciseId: e.exerciseId,
+            orderIndex: e.orderIndex,
+            done: e.done,
+            skipReason: e.skipReason,
+            weightKg: toNumber(e.weightKg),
+            loadUnit: e.loadUnit,
+            machineNote: e.machineNote,
+            setsDone: e.setsDone,
+            repsDone: e.repsDone,
+            holdSecondsDone: e.holdSecondsDone,
+            isExtra: e.isExtra,
+            note: e.note,
+            name: e.name,
+            measureLabel: e.measureLabel,
+          })),
+      },
+    }));
+
+  return [...mapped, ...extras];
 }
 
 /** Semaine de programme contenant une date, pour afficher bloc et consigne. */
@@ -452,6 +536,26 @@ export async function getCheckpoints() {
  * Vient du dernier test enregistré, sinon du max de départ déclaré dans le
  * programme. Le « max en forçant » ne compte pas : seul le test propre fait foi.
  */
+/**
+ * Tous les exercices, pour le sélecteur d'ajout à une séance.
+ * Inclut ceux créés à la main, avec leur unité de mesure.
+ */
+export async function getAllExercises() {
+  const db = getDb();
+  return db
+    .select({
+      id: schema.exercises.id,
+      name: schema.exercises.name,
+      muscleGroup: schema.exercises.muscleGroup,
+      equipment: schema.exercises.equipment,
+      unit: schema.exercises.unit,
+      measureLabel: schema.exercises.measureLabel,
+      isCustom: schema.exercises.isCustom,
+    })
+    .from(schema.exercises)
+    .orderBy(asc(schema.exercises.name));
+}
+
 export async function getPullupMax(fallback = 3): Promise<number> {
   const db = getDb();
   const rows = await db
@@ -481,6 +585,71 @@ export async function getTargets() {
 export async function getTestMetrics() {
   const db = getDb();
   return db.select().from(schema.testMetrics).orderBy(asc(schema.testMetrics.orderIndex));
+}
+
+/**
+ * Vue d'ensemble du programme : toutes les semaines, tous les jours, ce qui est
+ * prevu et ce qui est deja enregistre.
+ *
+ * Sert a deux choses : la page Programme, et le rappel des seances passees non
+ * saisies — un jour prescrit et non enregistre est un trou a combler.
+ */
+export async function getProgramOverview() {
+  const db = getDb();
+
+  const [weeks, sessions, logged] = await Promise.all([
+    db
+      .select({
+        weekNumber: schema.programWeeks.weekNumber,
+        blockName: schema.programWeeks.blockName,
+        startDate: schema.programWeeks.startDate,
+        endDate: schema.programWeeks.endDate,
+        instruction: schema.programWeeks.instruction,
+        programCode: schema.programs.code,
+      })
+      .from(schema.programWeeks)
+      .innerJoin(schema.programs, eq(schema.programs.id, schema.programWeeks.programId))
+      .orderBy(asc(schema.programWeeks.weekNumber)),
+
+    db
+      .select({
+        date: schema.programSessions.date,
+        slot: schema.programSessions.slot,
+        label: schema.programSessions.label,
+        weekNumber: schema.programSessions.weekNumber,
+        isRestDay: schema.programSessions.isRestDay,
+        isTestDay: schema.programSessions.isTestDay,
+        programCode: schema.programs.code,
+        exerciseCount: sql<number>`count(${schema.programExercises.id})::int`,
+      })
+      .from(schema.programSessions)
+      .innerJoin(schema.programs, eq(schema.programs.id, schema.programSessions.programId))
+      .leftJoin(
+        schema.programExercises,
+        eq(schema.programExercises.programSessionId, schema.programSessions.id),
+      )
+      .groupBy(
+        schema.programSessions.date,
+        schema.programSessions.slot,
+        schema.programSessions.label,
+        schema.programSessions.weekNumber,
+        schema.programSessions.isRestDay,
+        schema.programSessions.isTestDay,
+        schema.programs.code,
+      )
+      .orderBy(asc(schema.programSessions.date)),
+
+    db
+      .select({
+        date: schema.sessions.date,
+        slot: schema.sessions.slot,
+        status: schema.sessions.status,
+        location: schema.sessions.location,
+      })
+      .from(schema.sessions),
+  ]);
+
+  return { weeks, sessions, logged };
 }
 
 export async function getSettings() {

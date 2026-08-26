@@ -34,7 +34,8 @@ et il est couvert.
 - Usage principal : téléphone, en salle, à 23h, souvent à une main.
 - PWA installable sur **PC, tablette, iPhone et Android**.
 - Le programme est **déjà commencé** (semaine 1 en cours au 26/08/2026).
-- Mono-utilisateur.
+- **Deux utilisateurs** demandés, chacun avec son programme. Non implémenté à ce jour : l'application
+  est encore mono-compte (identifiant + mot de passe).
 
 ---
 
@@ -163,7 +164,20 @@ Conséquence, tirée du document : une séance maison **compte pour l'assiduité
 intérêt, elle évite de rater l'entraînement — mais elle est **exclue de la progression en charge**,
 le document précisant que les deux échelles ne se comparent pas.
 
-### 4.15 Photos de progression — non implémenté
+### 4.15 Saisie de ce qui s'écarte du programme — stable
+- **Ajouter un exercice** à n'importe quelle séance, choisi dans le catalogue complet.
+- **Créer un exercice** à la volée avec son unité : reps, sauts, mètres, secondes, minutes.
+- **Remplacer** un exercice indisponible : l'original passe en « non fait, machine occupée », le
+  substitut s'ajoute à la séance.
+- **Entraînement libre** avec titre, les jours sans programme.
+- Ces lignes portent `is_extra` : elles comptent dans le journal, mais ne sont pas comparées à une
+  prescription qui n'existe pas.
+
+### 4.16 Page Programme — stable
+Les 17 semaines, tous les jours, ce qui est prévu et ce qui est enregistré. Chaque jour est
+cliquable, y compris passé. Un encart « à rattraper » liste les séances prescrites et non saisies.
+
+### 4.17 Photos de progression — non implémenté
 Stockage externe à trancher (Vercel Blob, seul poste potentiellement payant).
 
 ---
@@ -230,7 +244,7 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 | Sécurité | 8/10 | Faille haute corrigée, validation Zod sur toutes les écritures, scrypt, cookie chiffré, comparaison à temps constant. Reste un avertissement modéré sur un outil de développement. |
 | Performance | 8/10 | Build en 12,6 s, graphiques sans JS client, pages dynamiques légères (25–140 Ko). |
 | Maintenabilité | 8/10 | Règles métier lisibles et localisées, décisions documentées. Le parseur PDF demande de la vigilance à chaque révision des documents. |
-| Infrastructure | 6/10 | Prêt pour Vercel mais **jamais déployé ni testé sur Neon** ; aucune CI. |
+| Infrastructure | 7/10 | Prêt pour Vercel mais **jamais déployé ni testé sur Neon** ; aucune CI. |
 | **Global** | **7,5/10** | Solide et vérifié en local ; la note monte dès le premier déploiement réussi. |
 
 ---

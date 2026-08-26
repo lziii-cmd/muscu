@@ -27,7 +27,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** Créneau d'une séance dans la journée. */
-export const slotEnum = pgEnum("slot", ["salle", "matin", "soir"]);
+export const slotEnum = pgEnum("slot", ["salle", "matin", "soir", "libre"]);
 
 /** Unité de mesure d'un exercice : répétitions ou tenue isométrique. */
 export const exerciseUnitEnum = pgEnum("exercise_unit", ["reps", "seconds"]);
@@ -105,6 +105,8 @@ export const photoAngleEnum = pgEnum("photo_angle", ["face", "profil", "dos"]);
 
 export const settings = pgTable("settings", {
   id: integer("id").primaryKey().default(1),
+  /** Identifiant de connexion, choisi au premier lancement. */
+  username: text("username"),
   passwordHash: text("password_hash"),
   displayName: text("display_name").default("Moi").notNull(),
   /** Sert à calculer l'objectif protéines (1,8 à 2,2 g/kg). */
@@ -144,6 +146,14 @@ export const exercises = pgTable(
     position: text("position"),
     execution: text("execution"),
     commonMistake: text("common_mistake"),
+    /**
+     * Libellé de l'unité mesurée : « reps », « sauts », « mètres », « minutes ».
+     * Permet de suivre une corde à sauter ou une course sans forcer le vocabulaire
+     * de la musculation.
+     */
+    measureLabel: text("measure_label").default("reps").notNull(),
+    /** Créé par l'utilisateur, hors programme. */
+    isCustom: boolean("is_custom").default(false).notNull(),
   },
   (table) => [uniqueIndex("exercises_slug_key").on(table.slug)],
 );
@@ -312,6 +322,8 @@ export const sessions = pgTable(
     /** Date à laquelle la séance a eu lieu. */
     date: date("date").notNull(),
     slot: slotEnum("slot").notNull(),
+    /** Titre libre, pour une séance hors programme. */
+    title: text("title"),
     status: sessionStatusEnum("status").default("planned").notNull(),
     location: sessionLocationEnum("location").default("salle").notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -360,6 +372,11 @@ export const sessionExercises = pgTable(
     orderLabel: text("order_label"),
     /** La case à cocher : l'exercice a-t-il été fait ? */
     done: boolean("done").default(false).notNull(),
+    /**
+     * Ajouté en plus du programme. Ces lignes comptent dans le journal et le
+     * tonnage, mais ne sont pas comparées à une prescription qui n'existe pas.
+     */
+    isExtra: boolean("is_extra").default(false).notNull(),
     skipReason: skipReasonEnum("skip_reason"),
     /** Charge de l'exercice — mode rapide, une valeur pour toutes les séries. */
     weightKg: numeric("weight_kg", { precision: 6, scale: 2 }),

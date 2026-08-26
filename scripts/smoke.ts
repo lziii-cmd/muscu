@@ -9,10 +9,12 @@
  * avec un serveur de développement déjà lancé donnerait des lectures
  * incohérentes, ce qui produirait des échecs qui n'existent pas.
  *
- * Ne s'exécute jamais en production : il refuse de démarrer si DATABASE_URL est
- * renseignée.
+ * Ne touche JAMAIS à la base de production : les variables Neon sont retirées de
+ * l'environnement avant toute connexion, y compris pour les processus enfants.
+ * Une garde qui se contenterait de refuser de tourner rendrait le test
+ * inutilisable dès que le projet est branché sur Neon.
  */
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { rmSync } from "node:fs";
 import { randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
@@ -50,6 +52,7 @@ const PAGES: { path: string; expect: string[] }[] = [
   { path: "/sommeil", expect: ["Sommeil", "Nuit dernière"] },
   { path: "/bilan", expect: ["Bilan de la semaine"] },
   { path: "/exercices", expect: ["Exercices"] },
+  { path: "/programme", expect: ["Programme", "Séances prévues", "semaine en cours"] },
   { path: "/seance/2026-08-26", expect: ["août"] },
 ];
 
@@ -69,9 +72,25 @@ async function waitForServer(timeoutMs = 60_000): Promise<boolean> {
 }
 
 async function main() {
-  if (process.env.DATABASE_URL) {
-    console.error("✗ SMOKE refusé : DATABASE_URL est renseignée. Ce script est réservé au local.");
-    process.exit(1);
+  /*
+   * Neon est écarté de l'environnement avant la moindre connexion. Les
+   * processus enfants héritent de `process.env` : les supprimer ici suffit à
+   * garantir que ni le seed ni le serveur de test ne verront la production.
+   */
+  const hadProduction = Boolean(process.env.DATABASE_URL);
+
+  /*
+   * Les variables sont mises à la chaîne vide, pas supprimées, et transmises
+   * telles quelles aux processus enfants.
+   *
+   * Les supprimer ne suffit pas : chaque enfant recharge `.env.local` par
+   * dotenv et y retrouve l'URL Neon. dotenv, lui, n'écrase jamais une variable
+   * déjà présente — une chaîne vide compte comme présente, et reste falsy.
+   */
+  process.env.DATABASE_URL = "";
+  process.env.DATABASE_URL_UNPOOLED = "";
+  if (hadProduction) {
+    console.log("  base de production neutralisée : le test tourne sur PGlite");
   }
 
   // Base dédiée, repartie de zéro à chaque exécution.
@@ -89,22 +108,36 @@ async function main() {
   const hash = `scrypt$${salt.toString("hex")}$${derived.toString("hex")}`;
 
   await db.execute(`insert into settings (id) values (1) on conflict (id) do nothing`);
-  await db.execute(`update settings set password_hash = ${q(hash)} where id = 1`);
+  await db.execute(`update settings set password_hash = ${q(hash)}, username = 'smoke' where id = 1`);
   await db.close();
 
   console.log("  import du référentiel…");
   await new Promise<void>((resolve, reject) => {
     const seed = spawn("npx", ["tsx", "scripts/seed.ts"], {
-      env: { ...process.env, PGLITE_DIR },
-      stdio: "ignore",
+      env: { ...process.env, PGLITE_DIR, DATABASE_URL: "", DATABASE_URL_UNPOOLED: "" },
+      stdio: "inherit",
       shell: true,
     });
     seed.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`seed a échoué (${code})`))));
   });
 
+  // Un serveur oublié par une exécution précédente répondrait avec du code
+  // périmé, et produirait des échecs incompréhensibles.
+  try {
+    const stale = await fetch(`${BASE}/login`, { redirect: "manual" });
+    if (stale.status < 500) {
+      console.error(
+        `✗ Le port ${PORT} est déjà occupé par un serveur. Arrête-le avant de relancer le test.`,
+      );
+      process.exit(1);
+    }
+  } catch {
+    // port libre, c'est ce qu'on veut
+  }
+
   console.log(`  démarrage du serveur sur le port ${PORT}…`);
   server = spawn("npx", ["next", "start", "-p", String(PORT)], {
-    env: { ...process.env, PGLITE_DIR },
+    env: { ...process.env, PGLITE_DIR, DATABASE_URL: "", DATABASE_URL_UNPOOLED: "" },
     stdio: "ignore",
     shell: true,
   });
@@ -118,17 +151,19 @@ async function main() {
   const login = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password, create: false }),
+    body: JSON.stringify({ username: "smoke", password, create: false }),
   });
 
   if (!login.ok) {
     console.error(`✗ Connexion refusée (${login.status}) :`, await login.text());
+    stopServer();
     process.exit(1);
   }
 
   const cookie = login.headers.get("set-cookie")?.split(";")[0];
   if (!cookie) {
     console.error("✗ Aucun cookie de session renvoyé.");
+    stopServer();
     process.exit(1);
   }
 
@@ -221,7 +256,9 @@ function stopServer() {
   // port reste occupé par le processus Node fils.
   try {
     if (process.platform === "win32") {
-      spawn("taskkill", ["/PID", String(server.pid), "/T", "/F"], { stdio: "ignore" });
+      // Arrêt SYNCHRONE : `process.exit` suit immédiatement, un kill asynchrone
+      // n'aurait pas le temps d'agir et le serveur survivrait à l'exécution.
+      spawnSync("taskkill", ["/PID", String(server.pid), "/T", "/F"], { stdio: "ignore" });
     } else {
       server.kill("SIGTERM");
     }

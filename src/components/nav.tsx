@@ -8,6 +8,7 @@ import {
   Apple,
   BedDouble,
   CalendarDays,
+  CalendarRange,
   Dumbbell,
   Flame,
   LineChart,
@@ -37,6 +38,7 @@ const PRIMARY = [
 ];
 
 const SECONDARY = [
+  { href: "/programme", label: "Programme", icon: CalendarRange },
   { href: "/calisthenie", label: "Calisthénie", icon: Activity },
   { href: "/corps", label: "Corps", icon: Ruler },
   { href: "/tests", label: "Tests & contrôles", icon: Dumbbell },

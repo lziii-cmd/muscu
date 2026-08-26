@@ -7,6 +7,7 @@ import { getSession, hashPassword, verifyPassword } from "@/lib/auth/session";
 export const runtime = "nodejs";
 
 const body = z.object({
+  username: z.string().min(1).max(60),
   password: z.string().min(1).max(200),
   create: z.boolean().default(false),
 });
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
   if (parsed.data.create) {
     if (settings.passwordHash) {
-      return NextResponse.json({ error: "un mot de passe existe déjà" }, { status: 409 });
+      return NextResponse.json({ error: "un compte existe déjà" }, { status: 409 });
     }
     if (parsed.data.password.length < 8) {
       return NextResponse.json({ error: "8 caractères minimum" }, { status: 400 });
@@ -44,15 +45,28 @@ export async function POST(request: Request) {
     const hash = await hashPassword(parsed.data.password);
     await db
       .update(schema.settings)
-      .set({ passwordHash: hash, updatedAt: new Date() })
+      .set({
+        username: parsed.data.username.trim(),
+        passwordHash: hash,
+        updatedAt: new Date(),
+      })
       .where(eq(schema.settings.id, 1));
   } else {
-    if (!settings.passwordHash) {
-      return NextResponse.json({ error: "aucun mot de passe défini" }, { status: 409 });
+    if (!settings.passwordHash || !settings.username) {
+      return NextResponse.json({ error: "aucun compte défini" }, { status: 409 });
     }
-    const valid = await verifyPassword(parsed.data.password, settings.passwordHash);
-    if (!valid) {
-      return NextResponse.json({ error: "mot de passe incorrect" }, { status: 401 });
+
+    /*
+     * Le mot de passe est vérifié même si l'identifiant est faux, et le message
+     * d'erreur est le même dans les deux cas : sans cela, le temps de réponse et
+     * le libellé indiqueraient si l'identifiant existe.
+     */
+    const usernameMatches =
+      parsed.data.username.trim().toLowerCase() === settings.username.toLowerCase();
+    const passwordMatches = await verifyPassword(parsed.data.password, settings.passwordHash);
+
+    if (!usernameMatches || !passwordMatches) {
+      return NextResponse.json({ error: "identifiant ou mot de passe incorrect" }, { status: 401 });
     }
   }
 

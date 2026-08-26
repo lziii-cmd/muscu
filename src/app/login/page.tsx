@@ -12,12 +12,12 @@ import { isAuthenticated } from "@/lib/auth/session";
 export default async function LoginPage() {
   if (await isAuthenticated()) redirect("/");
 
-  let hasPassword = false;
+  let hasAccount = false;
   let databaseReady = true;
 
   try {
     const settings = await getSettings();
-    hasPassword = Boolean(settings?.passwordHash);
+    hasAccount = Boolean(settings?.passwordHash && settings?.username);
   } catch {
     // Base non configurée ou injoignable : on le dit plutôt que d'afficher
     // un formulaire qui échouera de toute façon.
@@ -41,7 +41,7 @@ export default async function LoginPage() {
           </p>
         </div>
       ) : (
-        <LoginForm mode={hasPassword ? "connexion" : "creation"} />
+        <LoginForm mode={hasAccount ? "connexion" : "creation"} />
       )}
     </main>
   );

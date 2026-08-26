@@ -15,7 +15,7 @@ import { isAuthenticated } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
 
-const slot = z.enum(["salle", "matin", "soir"]);
+const slot = z.enum(["salle", "matin", "soir", "libre"]);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date attendue au format AAAA-MM-JJ");
 
 const sessionUpsert = z.object({
@@ -25,6 +25,8 @@ const sessionUpsert = z.object({
   status: z.enum(["in_progress", "done", "partial", "missed", "moved"]),
   /** Salle ou maison : les charges des deux ne se comparent pas. */
   location: z.enum(["salle", "maison"]).default("salle"),
+  /** Titre libre, pour une séance ajoutée hors programme. */
+  title: z.string().max(120).nullable().optional(),
   startedAt: z.string().datetime().nullable().optional(),
   endedAt: z.string().datetime().nullable().optional(),
   durationSeconds: z.number().int().min(0).max(86_400).nullable().optional(),
@@ -40,6 +42,8 @@ const sessionUpsert = z.object({
         orderIndex: z.number().int().min(0),
         orderLabel: z.string().max(10).nullable().optional(),
         done: z.boolean(),
+        /** Exercice ajouté en plus du programme. */
+        isExtra: z.boolean().default(false),
         skipReason: z
           .enum(["machine_occupee", "douleur", "manque_de_temps", "remplace", "autre"])
           .nullable()
@@ -144,6 +148,18 @@ const mutation = z.discriminatedUnion("kind", [
   }),
   z.object({
     id: z.string().min(1).max(64),
+    kind: z.literal("exercise.create"),
+    payload: z.object({
+      name: z.string().min(2).max(80),
+      /** Unite mesuree : « reps », « sauts », « metres », « minutes »… */
+      measureLabel: z.string().min(1).max(20).default("reps"),
+      unit: z.enum(["reps", "seconds"]).default("reps"),
+      muscleGroup: z.string().max(30).nullable().optional(),
+      equipment: z.string().max(30).nullable().optional(),
+    }),
+  }),
+  z.object({
+    id: z.string().min(1).max(64),
     kind: z.literal("meal.upsert"),
     payload: z.object({
       date: isoDate,
@@ -215,6 +231,46 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       return applySessionUpsert(db, payload as z.infer<typeof sessionUpsert>);
     case "session.miss":
       return applySessionMiss(db, payload as z.infer<typeof sessionMiss>);
+
+    /**
+     * Exercice créé par l'utilisateur, pour un entraînement hors programme.
+     *
+     * `measureLabel` porte l'unité réellement comptée — « sauts » pour la corde
+     * à sauter, « mètres » pour de la course. Forcer le vocabulaire de la
+     * musculation sur toute activité rendrait la saisie absurde.
+     */
+    case "exercise.create": {
+      const p = payload as {
+        name: string;
+        measureLabel: string;
+        unit: "reps" | "seconds";
+        muscleGroup?: string | null;
+        equipment?: string | null;
+      };
+
+      const slug = p.name
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 80);
+
+      await db
+        .insert(schema.exercises)
+        .values({
+          slug,
+          name: p.name.trim(),
+          unit: p.unit,
+          measureLabel: p.measureLabel.trim(),
+          muscleGroup: p.muscleGroup ?? "autre",
+          equipment: p.equipment ?? "autre",
+          isCustom: true,
+        })
+        // Un même exercice recréé deux fois ne doit pas faire échouer la file.
+        .onConflictDoNothing();
+      return;
+    }
 
     case "bodyweight.upsert": {
       const p = payload as { date: string; weightKg: number; fasted: boolean };
@@ -391,6 +447,7 @@ async function applySessionUpsert(db: Db, p: z.infer<typeof sessionUpsert>): Pro
       programSessionId: p.programSessionId ?? null,
       status: p.status,
       location: p.location,
+      title: p.title ?? null,
       startedAt: p.startedAt ? new Date(p.startedAt) : null,
       endedAt: p.endedAt ? new Date(p.endedAt) : null,
       durationSeconds: p.durationSeconds ?? null,
@@ -403,6 +460,7 @@ async function applySessionUpsert(db: Db, p: z.infer<typeof sessionUpsert>): Pro
       set: {
         status: p.status,
         location: p.location,
+        title: p.title ?? null,
         programSessionId: p.programSessionId ?? null,
         startedAt: p.startedAt ? new Date(p.startedAt) : null,
         endedAt: p.endedAt ? new Date(p.endedAt) : null,
@@ -428,6 +486,7 @@ async function applySessionUpsert(db: Db, p: z.infer<typeof sessionUpsert>): Pro
         orderIndex: exercise.orderIndex,
         orderLabel: exercise.orderLabel ?? null,
         done: exercise.done,
+        isExtra: exercise.isExtra,
         skipReason: exercise.skipReason ?? null,
         weightKg:
           exercise.weightKg === null || exercise.weightKg === undefined
