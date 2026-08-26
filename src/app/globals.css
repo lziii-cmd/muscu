@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+/*
+ * Thème sombre par défaut, et assumé.
+ *
+ * La séance de salle est à 23h et le bloc de calisthénie avant 7h : l'écran est
+ * regardé dans le noir, à bout de bras, entre deux séries. Un fond clair y est
+ * agressif. Le mode clair reste disponible pour la consultation de jour.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0e13;
+  --surface: #141a22;
+  --surface-raised: #1c242e;
+  --border: #2a3441;
+  --border-strong: #3b4756;
+
+  --text: #e8edf3;
+  --text-muted: #94a3b3;
+  --text-faint: #64748b;
+
+  --accent: #38bdf8;
+  --accent-strong: #0ea5e9;
+  --accent-contrast: #04202c;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  --salle: #38bdf8;
+  --matin: #fbbf24;
+  --soir: #a78bfa;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --surface-raised: #eef2f6;
+    --border: #dde3ea;
+    --border-strong: #c3ccd6;
+
+    --text: #101720;
+    --text-muted: #566172;
+    --text-faint: #7c8798;
+
+    --accent: #0284c7;
+    --accent-strong: #0369a1;
+    --accent-contrast: #ffffff;
+
+    --success: #059669;
+    --warning: #b45309;
+    --danger: #dc2626;
+
+    --salle: #0284c7;
+    --matin: #b45309;
+    --soir: #7c3aed;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-salle: var(--salle);
+  --color-matin: var(--matin);
+  --color-soir: var(--soir);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  /* Encoches iOS : l'app est installée en plein écran sur l'écran d'accueil. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/*
+ * Cibles tactiles : la saisie se fait d'une main, en salle. 44 px est le seuil
+ * en dessous duquel on rate sa cible.
+ */
+@utility tap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Le clavier numérique doit s'ouvrir directement sur les champs de charge. */
+input[inputmode="decimal"],
+input[inputmode="numeric"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Les tableaux larges défilent dans leur conteneur, jamais la page. */
+@utility scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

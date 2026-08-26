@@ -1,0 +1,96 @@
+# MEMORY.md — Mémoire du projet
+
+Dernière mise à jour : 2026-08-26
+
+## CONTEXTE ACTUEL
+- Où on en est : **application complète construite et vérifiée**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 27 tables, référentiel des 17 semaines importé. Typecheck, lint, 113 tests unitaires et test de fumée passent tous. Build en 12,6 s.
+- Dernière fonctionnalité travaillée : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
+- Prochaine fonctionnalité prévue : **branchement sur Neon** (l'utilisateur doit fournir `DATABASE_URL`), puis déploiement Vercel.
+- Problèmes ouverts :
+  - Aucun identifiant Neon fourni à ce jour : tout a été vérifié sur PGlite en local.
+  - Les fiches d'exécution des exercices (position / exécution / erreur à éviter) ne sont pas importées : leur tableau PDF est trop désaligné pour une extraction fiable.
+  - Les photos de progression n'ont pas de stockage branché (Vercel Blob à confirmer, seul poste potentiellement payant).
+  - Aucune vérification visuelle n'a pu être faite : le panneau navigateur n'est pas affichable dans cet environnement. La vérification est structurelle (HTML rendu + contenu attendu), pas esthétique.
+
+## DÉCISIONS TECHNIQUES
+| Date | Décision | Pourquoi | Alternative écartée |
+|------|----------|----------|---------------------|
+| 2026-08-26 | Stack Vercel + Neon | Demande explicite de l'utilisateur | Supabase, Railway |
+| 2026-08-26 | Next.js 16.3.3 + React 19.2 | Version installée par `create-next-app` ; doc locale lue avant de coder | Next 15 |
+| 2026-08-26 | Drizzle ORM plutôt que Prisma | Léger en serverless, migrations SQL versionnées | Prisma |
+| 2026-08-26 | drizzle-orm monté en 0.45.2 | Faille **haute** d'injection SQL (GHSA-gpj5-g38j-94v9) sur `<0.45.2` | Rester en 0.44 |
+| 2026-08-26 | Service worker écrit à la main | Next 16 fait **échouer le build** si une config webpack custom est présente (Turbopack par défaut) ; `@serwist/next` en dépend | `@serwist/next`, `next-pwa` |
+| 2026-08-26 | Graphiques en SVG pur, `recharts` retiré | Rendu côté serveur, aucun JS envoyé au client ; données mobiles coûteuses au Sénégal | Recharts, Chart.js |
+| 2026-08-26 | Semaine 1 du PPL transcrite à la main | Tableaux PDF structurellement dégradés (en-têtes fusionnés, valeurs décalées de 2 lignes) : un parseur produirait des données fausses sans le signaler | Forcer le parseur |
+| 2026-08-26 | Colonnes décalées lues en flux puis appariées par index | Constat vérifié : l'alignement vertical est perdu, l'ordre est fidèle | Se fier aux positions de colonnes |
+| 2026-08-26 | Refus d'apparier si les comptes diffèrent | Un décalage silencieux ferait charger la mauvaise barre pendant 4 mois | Deviner |
+| 2026-08-26 | Écriture via file d'attente IndexedDB (outbox) | Séance à 23h, réseau instable ; le serveur reste source de vérité car iOS purge le stockage des PWA | Écriture directe |
+| 2026-08-26 | Idempotence par identifiant de mutation client | Rejouer après coupure ne doit pas créer de doublon | Déduplication côté client seul |
+| 2026-08-26 | Auth mono-utilisateur, scrypt de `node:crypto` | Un seul compte ; évite une dépendance native à compiler | NextAuth, argon2 natif |
+| 2026-08-26 | PGlite en repli local quand `DATABASE_URL` est absente | Permet de développer et de tester sans identifiants Neon ni Docker | Exiger Neon dès le développement |
+| 2026-08-26 | Garde « pas de base locale » sur `VERCEL`, pas sur `NODE_ENV` | Un build de production tourne aussi en local (tests) ; le vrai risque est un déploiement sans base | Garde sur NODE_ENV |
+| 2026-08-26 | `react/no-unescaped-entities` désactivée | Interface intégralement en français, l'apostrophe est un caractère courant ; React échappe déjà le JSX | Échapper chaque apostrophe |
+
+## CE QUI A ÉTÉ FAIT
+| Date | Fonctionnalité | Statut | Notes |
+|------|----------------|--------|-------|
+| 2026-08-26 | Extraction et analyse des 3 PDF | fait | `pdftotext -layout` ; PDF remplacés en cours de session par des versions révisées |
+| 2026-08-26 | MEMORY.md et SPEC.md | fait | Phase 0 |
+| 2026-08-26 | Parseurs PPL et calisthénie | fait | 0 erreur, 0 avertissement côté salle ; 15 avertissements côté calisthénie sur le seul champ « repère » |
+| 2026-08-26 | Seed + document de revue | fait | 504 + 388 lignes ; `data/seed/REVUE.md` à relire avant import |
+| 2026-08-26 | Schéma 27 tables + migration | fait | `drizzle/0000_init.sql` |
+| 2026-08-26 | Domaine métier + 113 tests | fait | 6 modules purs, sans base ni React |
+| 2026-08-26 | Couche hors-ligne (Dexie + outbox) | fait | Synchronisation idempotente via `/api/sync` |
+| 2026-08-26 | Authentification mono-utilisateur | fait | iron-session + scrypt, groupe de routes `(app)` protégé |
+| 2026-08-26 | 11 pages + 2 pages de détail | fait | Aujourd'hui, séance/[date], journal, progression, calisthénie, corps, tests, diète, sommeil, bilan, exercices |
+| 2026-08-26 | PWA (manifeste, service worker, icônes) | fait | Icônes générées par programme, encodeur PNG maison |
+| 2026-08-26 | Test de fumée autonome | fait | 11 pages + 4 comportements d'API |
+
+## PROBLÈMES RENCONTRÉS & SOLUTIONS
+| Date | Problème | Cause | Solution appliquée |
+|------|----------|-------|--------------------|
+| 2026-08-26 | Lecture des PDF impossible via l'outil Read | `pdftoppm` absent | `pdftotext -layout` |
+| 2026-08-26 | En-têtes de semaine et de jour ignorés | Sauts de page `\f` collés en début de ligne | Retirés dans `normalizeText` |
+| 2026-08-26 | Charges tronquées (« 0 kg » au lieu de « 30 kg ») | Bornes de colonnes calées sur les libellés d'en-tête, alors que les valeurs débordent à gauche | Bornes calculées sur les colonnes de blanc du **corps** du tableau, en-tête exclu |
+| 2026-08-26 | Séries/reps perdues dans certains tableaux | Frontière reps/charge géométriquement instable | Zone lue d'un bloc puis découpée **par motif** |
+| 2026-08-26 | Valeurs en trop dans les flux | Deux causes distinctes : charge passée à la ligne, et décalage d'index | Fusion des continuations, reconnues par l'absence de motif « séries × reps » |
+| 2026-08-26 | Semaines toutes rattachées à la S1 (calisthénie) | Le parseur sautait d'un jour au suivant, franchissant les en-têtes de semaine | Fin de jour bornée aussi par l'en-tête de semaine |
+| 2026-08-26 | Blocs SOIR perdus (57 blocs) | Libellé « Exercice » sur une autre ligne que « Séries » | Colonne synthétisée, seule sa géométrie important |
+| 2026-08-26 | Faille **haute** d'injection SQL | `drizzle-orm < 0.45.2` | Montée en 0.45.2, audit revenu à 0 haute |
+| 2026-08-26 | `@serwist/next` incompatible | Config webpack custom → build en échec sous Turbopack | Service worker écrit à la main |
+| 2026-08-26 | **Build TypeScript en 38 minutes** | `.pglite` (29 Mo de binaires), `.next` et `data/` inclus dans le programme TypeScript | Exclus dans `tsconfig.json` → build ramené à **12,6 s** |
+| 2026-08-26 | Base locale injoignable au lancement | PGlite bundlé par Turbopack : son WASM localisé via `import.meta.url` n'est plus résolu | `serverExternalPackages: ["@electric-sql/pglite"]` |
+| 2026-08-26 | Test de fumée en échec après la 1re exécution | PGlite est mono-processus : le script et le serveur ne voient pas les mêmes écritures | Test rendu autonome : base dédiée (`PGLITE_DIR`) et serveur propre |
+| 2026-08-26 | Faux échecs du test de fumée | React échappe les entités HTML (`Aujourd&#x27;hui`) | Décodage avant comparaison |
+| 2026-08-26 | Erreurs de lint React 19 | `Date.now()` pendant le rendu, `setState` synchrone dans un effet | Compteur monotone, `useSyncExternalStore`, remontage par `key` |
+
+## POINTS DE VIGILANCE
+- **Le programme est daté et court.** 24 août → 20 décembre 2026. Aucune date en dur dans le code : tout vient de `program_weeks` ou de `src/lib/targets.ts`.
+- **PGlite est mono-processus.** Arrêter le serveur avant `db:migrate`, `db:seed` ou `db:reset-password`, sinon les écritures ne sont pas vues.
+- **Ne jamais afficher une courbe de poids seule.** En recomposition, le poids ment : la lecture croise toujours poids lissé + tour de taille + charges.
+- **La saisie doit tenir en une main, à 23h.** Cibles tactiles ≥ 44 px, clavier numérique, une charge par exercice et non par série.
+- **Le seed n'est pas une vérité absolue.** `data/seed/REVUE.md` existe pour être relu ; les valeurs prescrites restent éditables dans l'application.
+- **iOS purge le stockage des PWA** après quelques semaines sans ouverture : le local n'est qu'un tampon, le serveur fait foi.
+- Le tableau des consignes d'exécution des exercices reste à importer (extraction non fiable en l'état).
+
+## DETTE TECHNIQUE EN COURS
+| Priorité | Problème | Impact | Effort |
+|----------|----------|--------|--------|
+| Moyenne | Fiches d'exécution des exercices non importées | La bibliothèque affiche les noms et l'historique, pas les consignes | M |
+| Moyenne | Photos de progression sans stockage | Le comparateur avant/après ne peut pas fonctionner | M |
+| Basse | `drizzle-kit` tire un `esbuild` avec avertissement modéré | Outil local de migration, jamais déployé | S |
+| Basse | 15 avertissements de parsing sur le champ « repère » calisthénie | Champ indicatif (« Poids du corps », « Assistance »), laissé vide plutôt que faux | S |
+| Basse | Pas de tests de parcours (Playwright) | Le test de fumée couvre le rendu et l'API, pas l'interaction | M |
+
+## NOTES DE SESSION
+
+### 2026-08-26
+Session unique et longue. Phases 0 à 4 enchaînées après feu vert explicite (« fais tout d'un coup, vérifie, corrige et reteste »), avec autorisation spéciale de mettre à jour MEMORY.md et SPEC.md.
+
+Les 3 PDF ont été **remplacés en cours de session** par des versions révisées : même structure, tableaux plus complets. Le seed part des nouvelles versions.
+
+Quatre exigences ajoutées par l'utilisateur en cours de route et intégrées : enregistrement rétroactif avec badge de retard, case à cocher par exercice, une charge en kg par exercice, résumé de fin de séance. Elles ont fait apparaître un niveau dans le modèle de données (`session_exercises`) qu'il valait mieux introduire avant l'interface qu'après.
+
+Deux découvertes ont changé des choix d'architecture : Next 16 impose Turbopack et casse les intégrations PWA classiques (service worker écrit à la main), et le périmètre TypeScript faisait passer le build de 12 s à 38 min (exclusions ajoutées).
+
+Reste à faire côté utilisateur : créer la base Neon, renseigner `DATABASE_URL`, `DATABASE_URL_UNPOOLED` et `AUTH_SECRET`, relire `data/seed/REVUE.md`, puis déployer.

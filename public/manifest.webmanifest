@@ -1,0 +1,23 @@
+{
+  "name": "Muscu — suivi d'entraînement",
+  "short_name": "Muscu",
+  "description": "Suivi des 17 semaines : salle, calisthénie, diète, progression.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0e13",
+  "theme_color": "#0b0e13",
+  "lang": "fr",
+  "dir": "ltr",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Séance du jour", "url": "/", "description": "Saisir la séance en cours" },
+    { "name": "Journal", "url": "/journal", "description": "Calendrier et séances manquées" },
+    { "name": "Diète", "url": "/diete", "description": "Protéines, huile, eau" }
+  ]
+}

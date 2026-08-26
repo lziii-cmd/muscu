@@ -1,0 +1,111 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+/**
+ * Formulaire de connexion, ou de création du mot de passe au premier lancement.
+ *
+ * Le mot de passe n'est jamais stocké côté client : il part au serveur, qui le
+ * hache avec scrypt et pose un cookie de session chiffré.
+ */
+export function LoginForm({ mode }: { mode: "connexion" | "creation" }) {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const isCreation = mode === "creation";
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    if (isCreation) {
+      if (password.length < 8) {
+        setError("8 caractères minimum.");
+        return;
+      }
+      if (password !== confirm) {
+        setError("Les deux saisies diffèrent.");
+        return;
+      }
+    }
+
+    setPending(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, create: isCreation }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setError(body.error ?? "Échec de la connexion.");
+        return;
+      }
+
+      router.replace("/");
+      router.refresh();
+    } catch {
+      setError("Serveur injoignable. Vérifie ta connexion.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <label className="block text-sm">
+          <span className="text-faint">
+            {isCreation ? "Choisis un mot de passe" : "Mot de passe"}
+          </span>
+          <input
+            type="password"
+            autoComplete={isCreation ? "new-password" : "current-password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="tap mt-1 w-full rounded-xl border border-border bg-surface px-3 outline-none focus:border-accent"
+            required
+          />
+        </label>
+        {isCreation ? (
+          <p className="mt-1 text-xs text-faint">
+            Un seul compte, le tien. 8 caractères minimum.
+          </p>
+        ) : null}
+      </div>
+
+      {isCreation ? (
+        <label className="block text-sm">
+          <span className="text-faint">Confirme</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            className="tap mt-1 w-full rounded-xl border border-border bg-surface px-3 outline-none focus:border-accent"
+            required
+          />
+        </label>
+      ) : null}
+
+      {error ? (
+        <p className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="tap w-full rounded-xl bg-accent px-4 font-medium text-accent-contrast disabled:opacity-60"
+      >
+        {pending ? "…" : isCreation ? "Créer et entrer" : "Entrer"}
+      </button>
+    </form>
+  );
+}
