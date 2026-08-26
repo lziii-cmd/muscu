@@ -40,7 +40,7 @@ et il est couvert.
 
 ## 3. Modèle de données
 
-27 tables. Migration : `drizzle/0000_init.sql`.
+29 tables. Migration : `drizzle/0000_init.sql`.
 
 ### Référentiel (semé, lu seul)
 `programs`, `program_weeks`, `program_sessions`, `program_exercises` (dont `home_alternative`),
@@ -111,10 +111,9 @@ Motif obligatoire dans une liste fermée de 10 entrées. Distinction **manquée*
 motif dominant, jour de la semaine le plus sauté.
 
 ### 4.6 Calisthénie — stable
-Les 7 échelles avec leurs niveaux et critères. Critère de passage **« deux séances propres
+Les 8 échelles avec leurs niveaux et critères, extraites du document. Critère de passage **« deux séances propres
 consécutives »** suivi par un compteur visible, et passage proposé par l'app. Règle du **(max − 1)**
-appliquée au format du jour. Retest du max limité à un lundi sur deux. Objectifs jalonnés
-(4 / 6 / 8 / 10 tractions).
+appliquée au format du jour. Retest du max limité à un lundi sur deux. Objectifs jalonnés sur 8 mouvements (tractions, pompes, dips, dead hang, pike push-up, ATR, front lever, hollow body).
 
 ### 4.7 Suivi corporel — stable
 Pesées à jeun, **moyenne mobile 7 jours mise en avant** (le poids du jour varie de 1 à 2 kg),
@@ -122,8 +121,8 @@ variation hebdomadaire vs cible −0,3 à −0,5 %, alerte au-delà de −0,7 %.
 **Verdict de recomposition** explicite croisant poids, tour de taille et charges.
 
 ### 4.8 Tests et contrôles — stable
-Les 4 samedis pré-datés, saisie des 9 métriques de force, tableau comparatif des 4 jalons,
-tableau des mensurations de contrôle, écart à l'objectif de tractions.
+Les 4 samedis pré-datés, saisie des 11 métriques de force, tableau comparatif des 4 jalons,
+tableau des mensurations de contrôle, écart aux objectifs du jalon.
 
 ### 4.9 Diète — stable
 Objectif protéines calculé sur le poids lissé (1,8–2,2 g/kg) avec barre de progression et
@@ -142,7 +141,7 @@ Un écran qui tranche : **ça progresse / ça stagne / ça régresse, et où**. 
 précédente, tonnage, poids, sommeil, ce qui progresse, ce qui stagne, points de vigilance.
 
 ### 4.12 Bibliothèque d'exercices — stable *(fiches d'exécution à compléter)*
-Les 97 exercices des deux programmes, groupés, avec l'historique personnel et une fiche par
+Les 114 exercices des deux programmes, groupés, avec l'historique personnel et une fiche par
 exercice (courbe, records, conseil de progression, historique détaillé).
 Les consignes position/exécution/erreur ne sont pas encore importées.
 

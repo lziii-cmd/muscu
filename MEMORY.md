@@ -3,7 +3,7 @@
 Dernière mise à jour : 2026-08-26
 
 ## CONTEXTE ACTUEL
-- Où on en est : **application complète, reconstruite sur les PDF révisés du 26/08 à 02:07**, vérifiée. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 27 tables, référentiel des 17 semaines importé. Typecheck, lint, 113 tests unitaires et test de fumée passent tous. Build en 12,6 s.
+- Où on en est : **application complète, reconstruite sur les PDF révisés du 26/08 à 02:07**, vérifiée. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 29 tables, référentiel des 17 semaines importé. Typecheck, lint, 116 tests unitaires et test de fumée passent tous. Build en 12,6 s.
 - Dernière fonctionnalité travaillée : intégration des **alternatives maison** (séance déplaçable plutôt que ratée) et reprise complète du seed sur les nouveaux documents. Avant : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
 - Prochaine fonctionnalité prévue : **push GitHub puis déploiement Vercel**. La base Neon est créée (projet « Muscu », région AWS Europe Central 1 Francfort, Postgres 18) ; `DATABASE_URL` reste à renseigner côté Vercel et en local.
 - Problèmes ouverts :
@@ -38,12 +38,12 @@ Dernière mise à jour : 2026-08-26
 ## CE QUI A ÉTÉ FAIT
 | Date | Fonctionnalité | Statut | Notes |
 |------|----------------|--------|-------|
-| 2026-08-26 | Extraction et analyse des 3 PDF | fait | `pdftotext -layout` ; PDF remplacés en cours de session par des versions révisées |
+| 2026-08-26 | Extraction des 3 PDF | fait | `pdftotext -table` sur les versions révisées de 02:07 |
 | 2026-08-26 | MEMORY.md et SPEC.md | fait | Phase 0 |
-| 2026-08-26 | Parseurs PPL et calisthénie | fait | 0 erreur, 0 avertissement côté salle ; 15 avertissements côté calisthénie sur le seul champ « repère » |
-| 2026-08-26 | Seed + document de revue | fait | 504 + 388 lignes ; `data/seed/REVUE.md` à relire avant import |
-| 2026-08-26 | Schéma 27 tables + migration | fait | `drizzle/0000_init.sql` |
-| 2026-08-26 | Domaine métier + 113 tests | fait | 6 modules purs, sans base ni React |
+| 2026-08-26 | Parseurs PPL, calisthénie et référentiel | fait | 0 erreur, 0 avertissement sur les deux programmes |
+| 2026-08-26 | Seed + document de revue | fait | 504 + 388 lignes, 480 alternatives maison, 8 échelles, 8 objectifs, 11 métriques |
+| 2026-08-26 | Schéma 29 tables + migration | fait | `drizzle/0000_init.sql` |
+| 2026-08-26 | Domaine métier + 116 tests | fait | 6 modules purs, sans base ni React |
 | 2026-08-26 | Couche hors-ligne (Dexie + outbox) | fait | Synchronisation idempotente via `/api/sync` |
 | 2026-08-26 | Authentification mono-utilisateur | fait | iron-session + scrypt, groupe de routes `(app)` protégé |
 | 2026-08-26 | 11 pages + 2 pages de détail | fait | Aujourd'hui, séance/[date], journal, progression, calisthénie, corps, tests, diète, sommeil, bilan, exercices |
