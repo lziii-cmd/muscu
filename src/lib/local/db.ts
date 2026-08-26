@@ -31,6 +31,26 @@ export interface CachedSession {
   cachedAt: number;
 }
 
+/**
+ * Brouillon d'une séance en cours de saisie.
+ *
+ * Tout ce qui est tapé pendant une séance ne vit sinon que dans l'état React :
+ * quitter l'écran, verrouiller le téléphone assez longtemps pour qu'iOS
+ * décharge la page, et la saisie est perdue. À 23h en salle, c'est le pire
+ * moment pour redemander à quelqu'un de tout retaper.
+ *
+ * Le brouillon est écrit à chaque frappe et effacé dès que la séance part dans
+ * la file de synchronisation.
+ */
+export interface SessionDraft {
+  /** `${date}:${slot}` */
+  key: string;
+  date: string;
+  slot: string;
+  payload: unknown;
+  updatedAt: number;
+}
+
 export type MutationKind =
   | "session.upsert"
   | "session.miss"
@@ -60,6 +80,7 @@ class MuscuDatabase extends Dexie {
   cachedSessions!: Table<CachedSession, string>;
   outbox!: Table<OutboxEntry, string>;
   meta!: Table<{ key: string; value: unknown }, string>;
+  drafts!: Table<SessionDraft, string>;
 
   constructor() {
     super("muscu");
@@ -67,6 +88,14 @@ class MuscuDatabase extends Dexie {
       cachedSessions: "key, date, slot",
       outbox: "id, createdAt, kind",
       meta: "key",
+    });
+    // Version 2 : brouillons de séance. Dexie conserve les tables existantes,
+    // rien n'est perdu à la migration.
+    this.version(2).stores({
+      cachedSessions: "key, date, slot",
+      outbox: "id, createdAt, kind",
+      meta: "key",
+      drafts: "key, date, updatedAt",
     });
   }
 }
@@ -157,6 +186,27 @@ export async function flushOutbox(): Promise<{ sent: number; failed: number }> {
   }
 
   return { sent, failed };
+}
+
+/** Enregistre le brouillon d'une séance. Écrase le précédent. */
+export async function saveDraft(date: string, slot: string, payload: unknown): Promise<void> {
+  await localDb().drafts.put({
+    key: `${date}:${slot}`,
+    date,
+    slot,
+    payload,
+    updatedAt: Date.now(),
+  });
+}
+
+/** Brouillon d'une séance, s'il en existe un. */
+export async function readDraft(date: string, slot: string): Promise<SessionDraft | undefined> {
+  return localDb().drafts.get(`${date}:${slot}`);
+}
+
+/** Efface le brouillon : la séance est partie au serveur. */
+export async function clearDraft(date: string, slot: string): Promise<void> {
+  await localDb().drafts.delete(`${date}:${slot}`);
 }
 
 export async function pendingCount(): Promise<number> {

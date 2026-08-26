@@ -18,7 +18,7 @@ import { RestTimer } from "./rest-timer";
 import { ExercisePicker, type ExerciseOption } from "./exercise-picker";
 import { Badge, Card } from "@/components/ui";
 import { cn, formatDuration, formatKg, formatSeconds, SLOT_LABELS, type Slot } from "@/lib/utils";
-import { enqueue } from "@/lib/local/db";
+import { clearDraft, enqueue, flushOutbox, readDraft, saveDraft } from "@/lib/local/db";
 import { advanceDoubleProgression, bodyPartOf } from "@/lib/domain/progression";
 import { repsForMax } from "@/lib/domain/calisthenics";
 import { MISSED_REASON_LABELS, lateLogging, type MissedReason } from "@/lib/domain/adherence";
@@ -278,8 +278,81 @@ export function SessionScreen({
   /** Titre d'une séance libre : « Corde à sauter », « Football », … */
   const [title, setTitle] = useState(session.logged?.title ?? "");
   const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
+  /*
+   * État « déjà enregistrée », repris du serveur et non seulement de la saisie
+   * en cours. Sans cela, revenir sur une séance enregistrée rouvrait le
+   * formulaire comme si de rien n'était : les champs pré-remplis par le
+   * programme ressemblent à s'y méprendre à une saisie perdue.
+   */
+  const [savedAt, setSavedAt] = useState<string | null>(() =>
+    session.logged && ["done", "partial", "missed", "moved"].includes(session.logged.status)
+      ? (session.logged.loggedAt ?? new Date().toISOString())
+      : null,
+  );
   const startRef = useRef<number | null>(null);
+
+  /*
+   * Brouillon local.
+   *
+   * Tout ce qui est tapé ne vivait que dans l'état React : quitter l'écran, ou
+   * laisser iOS décharger la page pendant que le téléphone est verrouillé,
+   * suffisait à tout perdre. À 23h en salle, c'est le pire moment pour
+   * redemander à quelqu'un de retaper ses charges.
+   *
+   * Le brouillon est écrit à chaque frappe et relu au montage. Il n'est
+   * appliqué que si la personne n'a encore rien touché : une lecture qui
+   * arriverait après une première saisie l'écraserait.
+   */
+  const touched = useRef(false);
+  const draftLoaded = useRef(false);
+  /** Une saisie est en cours et n'est pas encore partie au serveur. */
+  const [hasDraft, setHasDraft] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restore = async () => {
+      const draft = await readDraft(date, session.slot);
+      if (cancelled || touched.current || !draft) {
+        draftLoaded.current = true;
+        return;
+      }
+
+      const payload = draft.payload as Partial<{
+        entries: Record<number, EntryState>;
+        extras: ExtraLine[];
+        location: "salle" | "maison";
+        rpe: number | null;
+        note: string;
+        title: string;
+        elapsed: number;
+      }>;
+
+      if (payload.entries) setEntries((current) => ({ ...current, ...payload.entries }));
+      if (payload.extras) setExtras(payload.extras);
+      if (payload.location) setLocation(payload.location);
+      if (payload.rpe !== undefined) setRpe(payload.rpe);
+      if (typeof payload.note === "string") setNote(payload.note);
+      if (typeof payload.title === "string") setTitle(payload.title);
+      if (typeof payload.elapsed === "number" && payload.elapsed > 0) setElapsed(payload.elapsed);
+
+      setHasDraft(true);
+      draftLoaded.current = true;
+    };
+
+    void restore();
+    return () => {
+      cancelled = true;
+    };
+  }, [date, session.slot]);
+
+  // Écriture du brouillon, une fois la restauration passée pour ne pas
+  // réécrire par-dessus ce qu'on vient tout juste de lire.
+  useEffect(() => {
+    if (!draftLoaded.current || !touched.current) return;
+    setHasDraft(true);
+    void saveDraft(date, session.slot, { entries, extras, location, rpe, note, title, elapsed });
+  }, [date, session.slot, entries, extras, location, rpe, note, title, elapsed]);
 
   // Chronomètre de séance : 60 minutes chrono, c'est la contrainte du programme.
   useEffect(() => {
@@ -293,8 +366,10 @@ export function SessionScreen({
     return () => window.clearInterval(interval);
   }, [running, elapsed]);
 
-  const update = (id: number, patch: Partial<EntryState>) =>
+  const update = (id: number, patch: Partial<EntryState>) => {
+    touched.current = true;
     setEntries((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
+  };
 
   const toggleDone = (exercise: PrescribedExercise) => {
     const entry = entries[exercise.id];
@@ -326,6 +401,7 @@ export function SessionScreen({
       update(replaced.id, { done: false, skipReason: "machine_occupee" });
     }
 
+    touched.current = true;
     setExtras((current) => [
       ...current,
       {
@@ -347,11 +423,15 @@ export function SessionScreen({
     if (!running) setRunning(true);
   };
 
-  const updateExtra = (key: string, patch: Partial<ExtraLine>) =>
+  const updateExtra = (key: string, patch: Partial<ExtraLine>) => {
+    touched.current = true;
     setExtras((current) => current.map((e) => (e.key === key ? { ...e, ...patch } : e)));
+  };
 
-  const removeExtra = (key: string) =>
+  const removeExtra = (key: string) => {
+    touched.current = true;
     setExtras((current) => current.filter((e) => e.key !== key));
+  };
 
   const doneCount =
     session.prescribed.filter((e) => entries[e.id]?.done).length +
@@ -453,6 +533,23 @@ export function SessionScreen({
           }),
         ],
       });
+      /*
+       * On attend l'envoi avant de prévenir l'écran parent.
+       *
+       * `enqueue` écrit en local et pousse la file sans attendre. Le parent
+       * rechargeait donc la journée depuis le serveur AVANT que la séance n'y
+       * soit arrivée, et réaffichait l'état d'avant l'enregistrement — ce qui
+       * se lit exactement comme « rien n'a été enregistré ».
+       *
+       * Hors ligne, `flushOutbox` rend la main tout de suite : la file part au
+       * retour du réseau, et le brouillon local garde la saisie en attendant.
+       */
+      await flushOutbox();
+
+      // La séance est partie : le brouillon n'a plus lieu d'être.
+      await clearDraft(date, session.slot);
+      touched.current = false;
+      setHasDraft(false);
       setSavedAt(new Date().toISOString());
       onSaved?.();
     } finally {
@@ -460,7 +557,33 @@ export function SessionScreen({
     }
   };
 
+  /**
+   * Déclarer une séance manquée efface les exercices déjà saisis, côté serveur
+   * comme en local : une séance ratée n'a pas d'exercices réalisés. Le geste
+   * est irréversible et le bouton voisine avec « Terminer la séance », d'où la
+   * confirmation — mais seulement s'il y a quelque chose à perdre.
+   */
   const declareMissed = async (reason: MissedReason) => {
+    const entered =
+      extras.length > 0 ||
+      session.prescribed.some((exercise) => {
+        const entry = entries[exercise.id];
+        const initial = initialEntry(exercise, session.logged);
+        return (
+          entry?.done ||
+          entry?.weightKg !== initial.weightKg ||
+          entry?.setsDone !== initial.setsDone ||
+          entry?.repsDone !== initial.repsDone
+        );
+      });
+
+    if (entered) {
+      const confirmed = window.confirm(
+        "Marquer cette séance comme manquée effacera les exercices et les charges déjà saisis.\n\nContinuer ?",
+      );
+      if (!confirmed) return;
+    }
+
     setSaving(true);
     try {
       await enqueue("session.miss", {
@@ -471,6 +594,10 @@ export function SessionScreen({
         missedReason: reason,
         loggedAt: new Date().toISOString(),
       });
+      await flushOutbox();
+      await clearDraft(date, session.slot);
+      touched.current = false;
+      setHasDraft(false);
       setSavedAt(new Date().toISOString());
       onSaved?.();
     } finally {
@@ -492,17 +619,28 @@ export function SessionScreen({
   }
 
   if (savedAt) {
+    // Une séance déclarée manquée n'a pas été « enregistrée » au sens où on
+    // l'entend : le dire autrement évite de laisser croire à une saisie perdue.
+    const missed = session.logged?.status === "missed";
+
     return (
       <Card>
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-success/15 text-success">
-            <Check size={18} />
+          <span
+            className={cn(
+              "mt-0.5 grid size-8 shrink-0 place-items-center rounded-full",
+              missed ? "bg-danger/15 text-danger" : "bg-success/15 text-success",
+            )}
+          >
+            {missed ? <X size={18} /> : <Check size={18} />}
           </span>
           <div>
-            <p className="font-medium">Séance enregistrée</p>
+            <p className="font-medium">{missed ? "Séance marquée manquée" : "Séance enregistrée"}</p>
             <p className="mt-1 text-sm text-muted">
-              {doneCount}/{total} exercices faits
-              {elapsed > 0 ? ` · ${formatDuration(elapsed)}` : ""}
+              {missed
+                ? "Aucun exercice conservé — c'est ce que veut dire « manquée »."
+                : `${doneCount}/${total} exercices faits`}
+              {!missed && elapsed > 0 ? ` · ${formatDuration(elapsed)}` : ""}
             </p>
             {late.isLate ? (
               <p className="mt-2">
@@ -532,7 +670,10 @@ export function SessionScreen({
           {session.slot === "libre" ? (
             <input
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                touched.current = true;
+                setTitle(event.target.value);
+              }}
               placeholder="Entraînement libre"
               aria-label="Titre de la séance"
               className="tap min-w-0 flex-1 rounded-lg border border-border bg-raised px-2 font-semibold outline-none focus:border-accent"
@@ -552,7 +693,10 @@ export function SessionScreen({
           {session.slot === "salle" || session.slot === "libre" ? (
             <button
               type="button"
-              onClick={() => setLocation((value) => (value === "salle" ? "maison" : "salle"))}
+              onClick={() => {
+                touched.current = true;
+                setLocation((value) => (value === "salle" ? "maison" : "salle"));
+              }}
               aria-pressed={location === "maison"}
               className={cn(
                 "tap flex items-center gap-1.5 rounded-lg border px-2.5 text-sm",
@@ -947,6 +1091,13 @@ export function SessionScreen({
               </button>
               <MissedMenu onSelect={declareMissed} disabled={saving} />
             </footer>
+
+            {hasDraft ? (
+              <p className="px-4 pb-4 text-xs text-faint sm:px-5">
+                Saisie en cours, gardée sur cet appareil. Elle ne compte que lorsque tu touches
+                « Terminer la séance ».
+              </p>
+            ) : null}
           </>
         ) : (
           <Summary
@@ -956,9 +1107,15 @@ export function SessionScreen({
             total={total}
             elapsed={elapsed}
             rpe={rpe}
-            setRpe={setRpe}
+            setRpe={(value) => {
+              touched.current = true;
+              setRpe(value);
+            }}
             note={note}
-            setNote={setNote}
+            setNote={(value) => {
+              touched.current = true;
+              setNote(value);
+            }}
             advices={advices}
             late={isPast}
             location={location}
