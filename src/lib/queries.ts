@@ -24,8 +24,11 @@ export interface PrescribedExercise {
   sets: number | null;
   repsLow: number | null;
   repsHigh: number | null;
-  holdSeconds: number | null;
-  repsFromMaxRule: boolean;
+  /** Tenue isométrique, bornes basse et haute (égales si valeur unique). */
+  holdSecondsLow: number | null;
+  holdSecondsHigh: number | null;
+  /** Répétitions déduites du max courant : max - `maxOffset`. */
+  maxOffset: number | null;
   perSide: boolean;
   loadRaw: string | null;
   loadKg: number | null;
@@ -119,8 +122,9 @@ export async function getDay(date: string): Promise<DaySession[]> {
           sets: schema.programExercises.sets,
           repsLow: schema.programExercises.repsLow,
           repsHigh: schema.programExercises.repsHigh,
-          holdSeconds: schema.programExercises.holdSeconds,
-          repsFromMaxRule: schema.programExercises.repsFromMaxRule,
+          holdSecondsLow: schema.programExercises.holdSecondsLow,
+          holdSecondsHigh: schema.programExercises.holdSecondsHigh,
+          maxOffset: schema.programExercises.maxOffset,
           perSide: schema.programExercises.perSide,
           loadRaw: schema.programExercises.loadRaw,
           loadKg: schema.programExercises.loadKg,
@@ -421,7 +425,7 @@ export async function getLadders() {
   return ladders.map((ladder) => ({
     ...ladder,
     levels: levels.filter((level) => level.ladderId === ladder.id),
-    currentLevel: progress.find((p) => p.ladderId === ladder.id)?.currentLevel ?? 1,
+    currentLevel: progress.find((p) => p.ladderId === ladder.id)?.currentLevel ?? ladder.startLevel,
     cleanStreak: progress.find((p) => p.ladderId === ladder.id)?.cleanStreak ?? 0,
   }));
 }
@@ -440,6 +444,25 @@ export async function getStrengthTests() {
 export async function getCheckpoints() {
   const db = getDb();
   return db.select().from(schema.checkpoints).orderBy(asc(schema.checkpoints.date));
+}
+
+/**
+ * Max de tractions courant, qui pilote le format des séances de tirage.
+ *
+ * Vient du dernier test enregistré, sinon du max de départ déclaré dans le
+ * programme. Le « max en forçant » ne compte pas : seul le test propre fait foi.
+ */
+export async function getPullupMax(fallback = 3): Promise<number> {
+  const db = getDb();
+  const rows = await db
+    .select({ value: schema.strengthTests.value, date: schema.strengthTests.date })
+    .from(schema.strengthTests)
+    .where(eq(schema.strengthTests.metric, "tractions-strictes"))
+    .orderBy(desc(schema.strengthTests.date))
+    .limit(1);
+
+  const latest = toNumber(rows[0]?.value);
+  return latest === null || latest <= 0 ? fallback : Math.round(latest);
 }
 
 export async function getTargets() {

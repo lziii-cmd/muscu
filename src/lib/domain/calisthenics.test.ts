@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluateLevelProgression,
+  repsForMax,
   maxRepsPerSet,
   pullupTargetStatus,
   setFormatForMax,
@@ -22,11 +23,13 @@ describe("setFormatForMax -- la règle du (max - 1)", () => {
     expect(setFormatForMax(6)).toMatchObject({ repsPerSet: 4, sets: 5 });
     expect(setFormatForMax(7)).toMatchObject({ repsPerSet: 4, sets: 5 });
     expect(setFormatForMax(8)).toMatchObject({ repsPerSet: 5, sets: 5 });
+    expect(setFormatForMax(9)).toMatchObject({ repsPerSet: 5, sets: 5 });
+    expect(setFormatForMax(10)).toMatchObject({ repsPerSet: 6, sets: 5 });
   });
 
-  it("bascule sur le lest à partir de 8 reps", () => {
-    expect(setFormatForMax(8).shouldAddWeight).toBe(true);
-    expect(setFormatForMax(7).shouldAddWeight).toBe(false);
+  it("bascule sur le lest à partir de 10 reps", () => {
+    expect(setFormatForMax(10).shouldAddWeight).toBe(true);
+    expect(setFormatForMax(9).shouldAddWeight).toBe(false);
   });
 
   it("renvoie vers les régressions sous 2 tractions", () => {
@@ -38,6 +41,31 @@ describe("setFormatForMax -- la règle du (max - 1)", () => {
     for (let max = 2; max <= 12; max++) {
       expect(setFormatForMax(max).repsPerSet).toBeLessThanOrEqual(maxRepsPerSet(max));
     }
+  });
+});
+
+describe("repsForMax -- le décalage n'est pas toujours de 1", () => {
+  it("applique max - 1 les jours de force", () => {
+    expect(repsForMax(3, 1)).toBe(2);
+    expect(repsForMax(6, 1)).toBe(5);
+  });
+
+  it("applique max - 2 le jeudi, journée de volume", () => {
+    // Confondre les deux donnerait deux journées lourdes de tractions par
+    // semaine — l'erreur que le programme cherche précisément à éviter.
+    expect(repsForMax(3, 2)).toBe(1);
+    expect(repsForMax(6, 2)).toBe(4);
+  });
+
+  it("garde le jeudi strictement plus léger que le lundi", () => {
+    for (let max = 3; max <= 12; max++) {
+      expect(repsForMax(max, 2)).toBeLessThan(repsForMax(max, 1));
+    }
+  });
+
+  it("ne descend jamais sous une répétition", () => {
+    expect(repsForMax(2, 2)).toBe(1);
+    expect(repsForMax(1, 2)).toBe(1);
   });
 });
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDay, getWeekFor } from "@/lib/queries";
+import { getDay, getPullupMax, getWeekFor } from "@/lib/queries";
 import { isAuthenticated } from "@/lib/auth/session";
 
 /**
@@ -24,10 +24,14 @@ export async function GET(_request: Request, context: RouteContext<"/api/jour/[d
     return NextResponse.json({ error: "date invalide" }, { status: 400 });
   }
 
-  const [sessions, weeks] = await Promise.all([getDay(date), getWeekFor(date)]);
+  const [sessions, weeks, pullupMax] = await Promise.all([
+    getDay(date),
+    getWeekFor(date),
+    getPullupMax(),
+  ]);
 
   return NextResponse.json(
-    { date, sessions, weeks },
+    { date, sessions, weeks, pullupMax },
     {
       headers: {
         // Le référentiel du jour ne change pas ; les séances saisies, si.

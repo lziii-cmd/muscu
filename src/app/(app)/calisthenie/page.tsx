@@ -1,6 +1,6 @@
 import { Badge, Card, CardTitle, PageHeader, Stat } from "@/components/ui";
 import { LadderCard } from "@/components/ladder-card";
-import { getLadders, getStrengthTests, getTargets } from "@/lib/queries";
+import { getLadders, getPullupMax, getStrengthTests, getTargets } from "@/lib/queries";
 import { pullupTargetStatus, setFormatForMax, shouldRetestMax } from "@/lib/domain/calisthenics";
 
 import { formatDate, today } from "@/lib/utils";
@@ -15,10 +15,11 @@ export const dynamic = "force-dynamic";
  * la page est donc construite autour des niveaux, pas des kilos.
  */
 export default async function CalisthéniePage() {
-  const [ladders, tests, allTargets] = await Promise.all([
+  const [ladders, tests, allTargets, currentMax] = await Promise.all([
     getLadders(),
     getStrengthTests(),
     getTargets(),
+    getPullupMax(),
   ]);
 
   // Le document fixe un objectif par mouvement et par jalon ; la traction est
@@ -31,10 +32,9 @@ export default async function CalisthéniePage() {
   const date = today();
 
   const pullupTests = tests
-    .filter((test) => test.metric === "tractions" && test.value !== null)
+    .filter((test) => test.metric === "tractions-strictes" && test.value !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const currentMax = pullupTests.length > 0 ? Math.round(pullupTests[pullupTests.length - 1].value!) : 2;
   const lastTestDate = pullupTests.length > 0 ? pullupTests[pullupTests.length - 1].date : null;
 
   const format = setFormatForMax(currentMax);
@@ -83,8 +83,14 @@ export default async function CalisthéniePage() {
         <p className="text-sm text-muted">{format.message}</p>
         <p className="mt-2 text-sm text-faint">
           Une série à l'échec te laisse cuit pour la suivante : tu accumules des répétitions
-          dégradées. Six séries de 1 rep parfaite te donnent 6 reps propres — et c'est la répétition
-          du geste frais qui construit la force nerveuse.
+          dégradées. Pour progresser tu <strong className="text-muted">ajoutes des séries</strong>,
+          jamais des reps — c'est la répétition du geste frais qui construit la force nerveuse.
+          Le « max en forçant » ne compte pas : une rep forcée n'entraîne rien et use les coudes.
+        </p>
+        <p className="mt-2 text-sm text-faint">
+          Le <strong className="text-muted">jeudi</strong> est ta journée de volume : elle est
+          prescrite à max − 2, plus légère que le lundi. Deux journées lourdes de tractions dans la
+          même semaine, c'est ce qui casse les coudes d'un débutant.
         </p>
         {format.shouldAddWeight ? (
           <p className="mt-2">

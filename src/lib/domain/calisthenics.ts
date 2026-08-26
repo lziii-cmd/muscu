@@ -30,11 +30,14 @@ export interface SetFormat {
  * dégradées à l'échec.
  *
  * Barème du document :
- *   max 2      -> 1 rep  × 6 séries
- *   max 3      -> 2 reps × 6 séries
- *   max 4-5    -> 3 reps × 5 séries
- *   max 6-7    -> 4 reps × 5 séries
- *   max 8 et + -> 5 reps × 5 séries, puis passage au lest
+ *   max 3       -> 2 reps × 6 séries
+ *   max 4-5     -> 3 reps × 5 séries
+ *   max 6-7     -> 4 reps × 5 séries
+ *   max 8-9     -> 5 reps × 5 séries
+ *   max 10 et + -> 6 reps × 5 séries, puis passage au lest
+ *
+ * Le « max en forçant » ne compte pas : une rep forcée, c'est du balancement et
+ * une demi-amplitude. Elle n'entraîne rien et elle use les coudes.
  */
 export function setFormatForMax(max: number): SetFormat {
   if (max < 2) {
@@ -57,12 +60,27 @@ export function setFormatForMax(max: number): SetFormat {
   if (max <= 7) {
     return { repsPerSet: 4, sets: 5, shouldAddWeight: false, message: "5 séries de 4 reps." };
   }
+  if (max <= 9) {
+    return { repsPerSet: 5, sets: 5, shouldAddWeight: false, message: "5 séries de 5 reps." };
+  }
   return {
-    repsPerSet: 5,
+    repsPerSet: 6,
     sets: 5,
     shouldAddWeight: true,
-    message: "5 séries de 5 reps — tu es prêt pour le lest.",
+    message: "5 séries de 6 reps — tu es prêt pour le lest.",
   };
+}
+
+/**
+ * Répétitions par série pour un décalage donné sur le max.
+ *
+ * Le décalage n'est pas toujours de 1 : le jeudi est la journée de **volume**,
+ * prescrite à (max - 2) pour rester plus légère que le lundi. Tout ramener à
+ * (max - 1) donnerait deux journées lourdes de tractions par semaine, ce qui
+ * casse les coudes d'un débutant.
+ */
+export function repsForMax(max: number, offset: number): number {
+  return Math.max(1, max - offset);
 }
 
 /** Sécurité brute : jamais plus de (max - 1) répétitions par série. */

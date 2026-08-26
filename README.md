@@ -3,9 +3,9 @@
 Suivi des 17 semaines de programme du **24 août au 20 décembre 2026** : musculation PPL le soir,
 calisthénie matin et soir, diète recomposition. PWA installable, utilisable hors-ligne.
 
-Le contenu des programmes vient des trois PDF à la racine ; l'application les remplace en tant
-qu'outil de saisie, notamment les trois tableaux qu'ils laissent volontairement vides (tableau de
-charges, tests de force, contrôles physiques).
+Le contenu des programmes vient de **`PROGRAMME-COMPLET.md`**, qui se déclare source de vérité.
+L'application remplace le papier en tant qu'outil de saisie, notamment les trois tableaux que le
+document laisse volontairement vides (tableau de charges, tests de force, contrôles physiques).
 
 ---
 
@@ -47,9 +47,9 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Le seed importe : 114 exercices, 8 échelles de progression, 8 objectifs jalonnés, 11 métriques de
-test, 14 aliments du marché local, et les 17 semaines des deux programmes (332 séances prescrites,
-892 lignes d'exercices, dont 480 avec leur alternative maison).
+Le seed importe : 111 exercices, 9 échelles de progression avec leur niveau de départ, 8 objectifs
+jalonnés, 11 métriques de test, 14 aliments du marché local, et les 17 semaines des deux programmes
+(299 séances prescrites, 892 lignes d'exercices, dont 480 avec leur alternative maison).
 
 ### 4. Lancer
 
@@ -63,35 +63,27 @@ Au premier lancement, l'écran de connexion propose de **créer** le mot de pass
 
 ## Le programme en base
 
-Le référentiel est reconstruit depuis les PDF, pas saisi à la main :
+Le référentiel est reconstruit depuis le document source, pas saisi à la main :
 
 ```bash
 npm run seed:build
 ```
 
-Cette commande lit `data/raw/*.txt` (texte extrait des PDF) et produit :
+Cette commande lit `PROGRAMME-COMPLET.md` et produit :
 
 - `data/seed/programme.json` — les données importées ensuite en base ;
 - `data/seed/REVUE.md` — **le même contenu, lisible, à relire avant l'import**.
 
-Ce fichier de revue n'est pas décoratif. L'extraction d'un tableau de PDF n'est jamais sûre à 100 % :
-une charge fausse ferait charger la mauvaise barre pendant quatre mois. Le script refuse d'écrire si
-un contrôle de cohérence échoue (dates incohérentes, doublons, temps de repos non conformes à la
-structure des 60 minutes).
+Le script **refuse d'écrire** si un contrôle de cohérence échoue : dates incohérentes, doublons,
+temps de repos non conformes à la structure des 60 minutes, alternative maison manquante, ou
+journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 
-Pour régénérer `data/raw/*.txt` depuis les PDF :
-
-```bash
-pdftotext -table "1-musculation-ppl-soir (1).pdf" data/raw/ppl.txt
-```
-
-> Le mode **`-table`** est important. En `-layout`, les colonnes de droite dérivent d'une ligne vers
-> le haut et il faut des heuristiques d'appariement pour les recoller — fragiles, et incapables de
-> lire la colonne « Alternative maison » qui contient elle-même des « 3 × 12 ». En `-table`, une
-> ligne du tableau est une ligne du fichier, et la semaine 1 devient lisible comme les autres.
-> Le fichier produit est encodé en CP1252 : `iconv -f CP1252 -t UTF-8` avant usage.
-
----
+> **Pourquoi le Markdown plutôt que les PDF.** L'extraction depuis un PDF est un aller-retour
+> lossy, et trois classes de bugs en sont sorties : des colonnes qui dérivent d'une ligne, des
+> fourchettes écrasées sur leur borne haute (`4 × 20–30 s` devenu `4 × 30 s`), et des consignes
+> tronquées. Le pire était silencieux : la journée de volume du jeudi, prescrite à `max − 2`,
+> ramenée à `max − 1` — soit deux journées lourdes de tractions par semaine. Dans un tableau
+> Markdown les cellules sont délimitées : ces bugs n'ont plus de place où exister.
 
 ## Commandes
 
@@ -105,7 +97,9 @@ pdftotext -table "1-musculation-ppl-soir (1).pdf" data/raw/ppl.txt
 | `npm run db:migrate` | Applique les migrations |
 | `npm run db:seed` | Importe le référentiel |
 | `npm run db:reset` | **Destructif** — vide le schéma |
-| `npm run seed:build` | Reconstruit le seed depuis les PDF |
+| `npm run seed:build` | Reconstruit le seed depuis `PROGRAMME-COMPLET.md` |
+| `npm run smoke` | Test de fumée autonome (après `npm run build`) |
+| `npm run db:reset-password` | Efface le mot de passe local |
 
 ---
 
@@ -123,22 +117,23 @@ src/
     local/          IndexedDB et file d'attente hors-ligne
     auth/           session mono-utilisateur
 scripts/
-  lib/              parseurs de PDF
+  lib/              parseur du document source
 data/
-  raw/              texte extrait des PDF
   seed/             seed produit + document de revue
 ```
 
 ### Le domaine métier est isolé
 
 `src/lib/domain/` ne connaît ni la base ni React : ce sont des fonctions pures, couvertes par
-**116 tests**. C'est là que vivent les règles du programme, et c'est là qu'une erreur coûterait le
+**120 tests**. C'est là que vivent les règles du programme, et c'est là qu'une erreur coûterait le
 plus cher :
 
 - **double progression** — haut de fourchette tenu sur toutes les séries → +2,5 kg (haut du corps)
   ou +5 kg (bas), et retour au bas de la fourchette ;
 - **règle de la série test** — ±2,5 à 5 kg selon le résultat de la première série ;
-- **règle du (max − 1)** en calisthénie, et passage de niveau après deux séances propres consécutives ;
+- **règle du (max − N)** en calisthénie — le décalage vaut 1 les jours de force et 2 le jeudi,
+  journée de volume volontairement plus légère — et passage de niveau après deux séances propres
+  consécutives ;
 - **séances à la maison** : elles comptent pour l'assiduité mais sont exclues de la progression en
   charge, le programme précisant que les deux échelles ne se comparent pas ;
 - **moyenne mobile 7 jours** et verdict de recomposition croisant poids, tour de taille et charges ;

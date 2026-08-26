@@ -1,5 +1,5 @@
 {
-  "id": "051a7df5-1c7a-4d5d-a8a9-ab1526103aa8",
+  "id": "c3715428-4316-49d2-9a41-a2fce1c7afe9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -510,6 +510,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "start_level": {
+          "name": "start_level",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
         }
       },
       "indexes": {
@@ -877,18 +884,23 @@
           "primaryKey": false,
           "notNull": false
         },
-        "hold_seconds": {
-          "name": "hold_seconds",
+        "hold_seconds_low": {
+          "name": "hold_seconds_low",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "reps_from_max_rule": {
-          "name": "reps_from_max_rule",
-          "type": "boolean",
+        "hold_seconds_high": {
+          "name": "hold_seconds_high",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": false
+        },
+        "max_offset": {
+          "name": "max_offset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "per_side": {
           "name": "per_side",

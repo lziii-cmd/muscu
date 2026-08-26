@@ -77,7 +77,8 @@ CREATE TABLE "ladders" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"slug" text NOT NULL,
 	"name" text NOT NULL,
-	"description" text
+	"description" text,
+	"start_level" integer DEFAULT 1 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "meal_items" (
@@ -126,8 +127,9 @@ CREATE TABLE "program_exercises" (
 	"sets" integer,
 	"reps_low" integer,
 	"reps_high" integer,
-	"hold_seconds" integer,
-	"reps_from_max_rule" boolean DEFAULT false NOT NULL,
+	"hold_seconds_low" integer,
+	"hold_seconds_high" integer,
+	"max_offset" integer,
 	"per_side" boolean DEFAULT false NOT NULL,
 	"load_raw" text,
 	"load_kg" numeric(6, 2),

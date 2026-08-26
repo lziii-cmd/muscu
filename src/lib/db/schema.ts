@@ -159,6 +159,8 @@ export const ladders = pgTable(
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     description: text("description"),
+    /** Niveau de départ, signalé en gras dans le document source. */
+    startLevel: integer("start_level").default(1).notNull(),
   },
   (table) => [uniqueIndex("ladders_slug_key").on(table.slug)],
 );
@@ -272,9 +274,18 @@ export const programExercises = pgTable(
     sets: integer("sets"),
     repsLow: integer("reps_low"),
     repsHigh: integer("reps_high"),
-    holdSeconds: integer("hold_seconds"),
-    /** Les reps se déduisent du max courant (règle du max - 1). */
-    repsFromMaxRule: boolean("reps_from_max_rule").default(false).notNull(),
+    /**
+     * Tenue isométrique, bornes basse et haute. Une fourchette « 20-30 s » n'est
+     * pas une tenue de 30 s : n'en garder que la borne haute durcit la consigne.
+     */
+    holdSecondsLow: integer("hold_seconds_low"),
+    holdSecondsHigh: integer("hold_seconds_high"),
+    /**
+     * Répétitions déduites du max courant : max - `maxOffset`.
+     * Le décalage vaut 1 les jours de force et 2 le jeudi, journée de volume
+     * volontairement plus légère. Le confondre donne deux journées lourdes.
+     */
+    maxOffset: integer("max_offset"),
     perSide: boolean("per_side").default(false).notNull(),
     /** Texte du document : « 30 kg », « Poids du corps », « Barre à vide (20 kg) ». */
     loadRaw: text("load_raw"),

@@ -10,6 +10,7 @@ import { cacheSession, readCachedSession } from "@/lib/local/db";
 
 interface DayPayload {
   date: string;
+  pullupMax: number;
   sessions: SessionData[];
   weeks: {
     weekNumber: number;
@@ -164,6 +165,7 @@ export function DayView({ date }: { date: string }) {
             date={date}
             session={session}
             isPast={isPast}
+            pullupMax={data.pullupMax ?? 3}
             onSaved={load}
           />
         ))}

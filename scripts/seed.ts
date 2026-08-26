@@ -1,6 +1,6 @@
 /**
- * Importe le référentiel en base : exercices, échelles, aliments, jalons,
- * et les 17 semaines des deux programmes.
+ * Importe le référentiel en base : exercices, échelles, objectifs, métriques de
+ * test, aliments, jalons, et les 17 semaines des deux programmes.
  *
  *   npm run db:seed
  *
@@ -10,17 +10,11 @@
 import { readFileSync } from "node:fs";
 import { openDatabase, q } from "./db";
 import { FOODS } from "./lib/reference-data";
-import { CHECKPOINT_DATES, type LadderSeed, type TargetSeed, type TestMetricSeed } from "./lib/cali-reference";
-import type { PplDay, PplWeek } from "./lib/ppl-parser";
-import type { CaliDay, CaliWeek } from "./lib/cali-parser";
+import type { ParsedProgram, ProgramDay, ProgramWeek } from "./lib/program-parser";
 
-interface SeedFile {
-  year: number;
-  ppl: { weeks: PplWeek[]; days: PplDay[] };
-  calisthenie: { weeks: CaliWeek[]; days: CaliDay[] };
-  ladders: LadderSeed[];
-  testMetrics: TestMetricSeed[];
-  targets: TargetSeed[];
+interface SeedFile extends ParsedProgram {
+  source: string;
+  checkpointDates: string[];
 }
 
 function slugify(name: string): string {
@@ -33,22 +27,18 @@ function slugify(name: string): string {
     .slice(0, 80);
 }
 
-/** « 30 kg » -> 30 ; « 7,5 kg » -> 7.5 ; « Poids du corps » / « -- » -> null. */
-export function parseKg(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  const match = raw.match(/(\d+(?:[.,]\d+)?)\s*kg/i);
-  if (!match) return null;
-  return Number(match[1].replace(",", "."));
-}
-
 function equipmentOf(name: string): string {
   const n = name.toLowerCase();
   if (/poulie|tirage vertical|face pull/.test(n)) return "poulie";
-  if (/barre/.test(n)) return "barre";
   if (/haltère|halteres|goblet|oiseau/.test(n)) return "haltere";
   if (/machine|presse|leg curl|leg extension|pec-deck/.test(n)) return "machine";
-  if (/traction|dips|pompe|pike|atr|hspu|lever|l-sit|hollow|planche|gainage|pistol|suspension|hang|scapula|mobilit/.test(n))
+  if (
+    /traction|dips|pompe|pike|atr|hspu|lever|l-sit|hollow|planche|gainage|pistol|suspension|hang|scapula|mobilit|dead bug|poignets|squat une jambe/.test(
+      n,
+    )
+  )
     return "poids_du_corps";
+  if (/barre/.test(n)) return "barre";
   return "autre";
 }
 
@@ -60,6 +50,7 @@ function groupOf(label: string): string {
   if (l.includes("CORE") || l.includes("GAINAGE")) return "core";
   if (l.includes("MOBILIT")) return "mobilite";
   if (l.includes("BRAS TENDUS")) return "bras_tendus";
+  if (l.includes("PRISE")) return "prise";
   return "autre";
 }
 
@@ -68,6 +59,7 @@ async function main() {
   console.log(`Base : ${db.label}`);
 
   const seed: SeedFile = JSON.parse(readFileSync("data/seed/programme.json", "utf8"));
+  console.log(`Source : ${seed.source}`);
 
   // -------------------------------------------------------------------------
   // Exercices : dérivés des deux programmes, dédoublonnés par slug.
@@ -84,15 +76,15 @@ async function main() {
 
   const remember = (name: string, label: string, isHold: boolean) => {
     const clean = name.replace(/\s+/g, " ").trim();
-    if (!clean) return;
+    if (clean === "") return;
     const slug = slugify(clean);
-    const equipment = equipmentOf(clean);
     const existing = exercises.get(slug);
     if (existing) {
       // Un exercice mesuré au moins une fois en tenue est un isométrique.
       if (isHold) existing.unit = "seconds";
       return;
     }
+    const equipment = equipmentOf(clean);
     exercises.set(slug, {
       slug,
       name: clean,
@@ -103,39 +95,41 @@ async function main() {
     });
   };
 
-  for (const day of seed.ppl.days) {
-    for (const e of day.exercises) remember(e.name, day.sessionType, false);
-  }
-  for (const day of seed.calisthenie.days) {
-    for (const block of day.blocks) {
-      for (const e of block.exercises) remember(e.name, day.theme, e.holdSeconds !== null);
+  for (const part of [seed.ppl, seed.calisthenie]) {
+    for (const day of part.days) {
+      for (const session of day.sessions) {
+        for (const exercise of session.exercises) {
+          remember(exercise.name, day.label, exercise.volume.holdSecondsLow !== null);
+        }
+      }
     }
   }
-
   console.log(`  ${exercises.size} exercices distincts`);
 
   // -------------------------------------------------------------------------
   // Réécriture du référentiel (le journal n'est pas touché).
   // -------------------------------------------------------------------------
-  await db.execute("delete from program_exercises");
-  await db.execute("delete from program_sessions");
-  await db.execute("delete from program_weeks");
-  await db.execute("delete from programs");
-  await db.execute("delete from ladder_levels");
-  await db.execute("delete from ladders");
-  await db.execute("delete from foods");
-  await db.execute("delete from targets");
-  await db.execute("delete from test_metrics");
+  for (const table of [
+    "program_exercises",
+    "program_sessions",
+    "program_weeks",
+    "programs",
+    "ladder_levels",
+    "ladders",
+    "foods",
+    "targets",
+    "test_metrics",
+  ]) {
+    await db.execute(`delete from ${table}`);
+  }
 
   for (const e of exercises.values()) {
     await db.execute(
       `insert into exercises (slug, name, muscle_group, equipment, unit, is_bodyweight)
        values (${q(e.slug)}, ${q(e.name)}, ${q(e.muscleGroup)}, ${q(e.equipment)}, ${q(e.unit)}, ${q(e.isBodyweight)})
        on conflict (slug) do update set
-         name = excluded.name,
-         muscle_group = excluded.muscle_group,
-         equipment = excluded.equipment,
-         unit = excluded.unit,
+         name = excluded.name, muscle_group = excluded.muscle_group,
+         equipment = excluded.equipment, unit = excluded.unit,
          is_bodyweight = excluded.is_bodyweight`,
     );
   }
@@ -146,12 +140,12 @@ async function main() {
   }
 
   // -------------------------------------------------------------------------
-  // Échelles de progression
+  // Échelles de progression, avec le niveau de départ du document.
   // -------------------------------------------------------------------------
   for (const ladder of seed.ladders) {
     const [{ id }] = await db.query<{ id: number }>(
-      `insert into ladders (slug, name, description)
-       values (${q(ladder.slug)}, ${q(ladder.name)}, ${q(ladder.description)})
+      `insert into ladders (slug, name, description, start_level)
+       values (${q(ladder.slug)}, ${q(ladder.name)}, null, ${ladder.startLevel})
        returning id`,
     );
     for (const level of ladder.levels) {
@@ -160,28 +154,27 @@ async function main() {
          values (${id}, ${level.level}, ${q(level.movement)}, ${q(level.criterion)})`,
       );
     }
+    // La progression démarre au niveau que le document désigne comme le tien.
     await db.execute(
       `insert into ladder_progress (ladder_id, current_level, clean_streak)
-       values (${id}, 1, 0)
-       on conflict (ladder_id) do nothing`,
+       values (${id}, ${ladder.startLevel}, 0)
+       on conflict (ladder_id) do update set current_level = excluded.current_level`,
     );
   }
-  console.log(`  ${seed.ladders.length} échelles de progression`);
+  console.log(`  ${seed.ladders.length} échelles`);
 
   // -------------------------------------------------------------------------
-  // Objectifs jalonnés
+  // Objectifs et métriques de test
   // -------------------------------------------------------------------------
   for (const target of seed.targets) {
     for (const [date, value] of Object.entries(target.byDate)) {
       await db.execute(
         `insert into targets (slug, movement, unit, date, value, start_label)
          values (${q(target.slug)}, ${q(target.movement)}, ${q(target.unit)}, ${q(date)},
-                 ${q(value)}, ${q(target.start)})
+                 ${q(value)}, ${q(target.startLabel)})
          on conflict (slug, date) do update set
-           value = excluded.value,
-           movement = excluded.movement,
-           unit = excluded.unit,
-           start_label = excluded.start_label`,
+           value = excluded.value, movement = excluded.movement,
+           unit = excluded.unit, start_label = excluded.start_label`,
       );
     }
   }
@@ -198,7 +191,7 @@ async function main() {
   console.log(`  ${seed.testMetrics.length} métriques de test`);
 
   // -------------------------------------------------------------------------
-  // Aliments
+  // Aliments et jalons
   // -------------------------------------------------------------------------
   for (const food of FOODS) {
     await db.execute(
@@ -209,10 +202,7 @@ async function main() {
   }
   console.log(`  ${FOODS.length} aliments`);
 
-  // -------------------------------------------------------------------------
-  // Jalons de contrôle
-  // -------------------------------------------------------------------------
-  for (const date of CHECKPOINT_DATES) {
+  for (const date of seed.checkpointDates) {
     await db.execute(
       `insert into checkpoints (date, label)
        values (${q(date)}, ${q("Contrôle -- mensurations, photos, meilleures séries")})
@@ -223,38 +213,8 @@ async function main() {
   // -------------------------------------------------------------------------
   // Programmes
   // -------------------------------------------------------------------------
-  async function insertProgram(
-    code: string,
-    name: string,
-    weeks: (PplWeek | CaliWeek)[],
-    sessions: {
-      weekNumber: number;
-      date: string;
-      slot: string;
-      label: string;
-      heading: string | null;
-      isRestDay: boolean;
-      isTestDay: boolean;
-      exercises: {
-        orderLabel: string;
-        orderIndex: number;
-        supersetGroup: string | null;
-        name: string;
-        sets: number | null;
-        repsLow: number | null;
-        repsHigh: number | null;
-        holdSeconds: number | null;
-        repsFromMaxRule: boolean;
-        perSide: boolean;
-        loadRaw: string | null;
-        dumbbellRaw: string | null;
-        restSeconds: number | null;
-        cue: string | null;
-        homeAlternative: string | null;
-      }[];
-    }[],
-  ) {
-    const dates = sessions.map((s) => s.date).sort();
+  async function insertProgram(code: string, name: string, weeks: ProgramWeek[], days: ProgramDay[]) {
+    const dates = days.map((d) => d.date).sort();
     const [{ id: programId }] = await db.query<{ id: number }>(
       `insert into programs (code, name, start_date, end_date)
        values (${q(code)}, ${q(name)}, ${q(dates[0])}, ${q(dates[dates.length - 1])})
@@ -269,118 +229,58 @@ async function main() {
       );
     }
 
-    let exerciseCount = 0;
-    for (const session of sessions) {
-      const [{ id: sessionId }] = await db.query<{ id: number }>(
-        `insert into program_sessions (program_id, week_number, date, slot, label, heading, is_rest_day, is_test_day)
-         values (${programId}, ${session.weekNumber}, ${q(session.date)}, ${q(session.slot)},
-                 ${q(session.label)}, ${q(session.heading)}, ${q(session.isRestDay)}, ${q(session.isTestDay)})
-         returning id`,
-      );
+    let lines = 0;
+    for (const day of days) {
+      // Un jour sans bloc (repos, jour de test) est tout de même enregistré :
+      // le calendrier doit le distinguer d'un trou.
+      const sessions =
+        day.sessions.length > 0
+          ? day.sessions
+          : [
+              {
+                slot: code === "ppl" ? ("salle" as const) : ("matin" as const),
+                heading: "",
+                exercises: [],
+              },
+            ];
 
-      for (const e of session.exercises) {
-        const exerciseId = exerciseIds.get(slugify(e.name.replace(/\s+/g, " ").trim()));
-        if (!exerciseId) throw new Error(`Exercice inconnu au moment de l'import : « ${e.name} »`);
-        await db.execute(
-          `insert into program_exercises
-             (program_session_id, exercise_id, order_label, order_index, superset_group,
-              sets, reps_low, reps_high, hold_seconds, reps_from_max_rule, per_side,
-              load_raw, load_kg, dumbbell_raw, dumbbell_kg, rest_seconds, cue, home_alternative)
-           values (${sessionId}, ${exerciseId}, ${q(e.orderLabel)}, ${e.orderIndex}, ${q(e.supersetGroup)},
-                   ${q(e.sets)}, ${q(e.repsLow)}, ${q(e.repsHigh)}, ${q(e.holdSeconds)},
-                   ${q(e.repsFromMaxRule)}, ${q(e.perSide)},
-                   ${q(e.loadRaw)}, ${q(parseKg(e.loadRaw))}, ${q(e.dumbbellRaw)}, ${q(parseKg(e.dumbbellRaw))},
-                   ${q(e.restSeconds)}, ${q(e.cue)}, ${q(e.homeAlternative)})`,
+      for (const session of sessions) {
+        const [{ id: sessionId }] = await db.query<{ id: number }>(
+          `insert into program_sessions
+             (program_id, week_number, date, slot, label, heading, is_rest_day, is_test_day)
+           values (${programId}, ${day.weekNumber}, ${q(day.date)}, ${q(session.slot)},
+                   ${q(day.label)}, ${q(session.heading || null)}, ${q(day.isRestDay)}, ${q(day.isTestDay)})
+           returning id`,
         );
-        exerciseCount++;
+
+        for (const [index, e] of session.exercises.entries()) {
+          const exerciseId = exerciseIds.get(slugify(e.name.replace(/\s+/g, " ").trim()));
+          if (!exerciseId) throw new Error(`Exercice inconnu à l'import : « ${e.name} »`);
+
+          await db.execute(
+            `insert into program_exercises
+               (program_session_id, exercise_id, order_label, order_index, superset_group,
+                sets, reps_low, reps_high, hold_seconds_low, hold_seconds_high, max_offset,
+                per_side, load_raw, load_kg, dumbbell_raw, dumbbell_kg, rest_seconds, cue,
+                home_alternative)
+             values (${sessionId}, ${exerciseId}, ${q(e.order)}, ${index}, ${q(e.supersetGroup)},
+                     ${q(e.volume.sets)}, ${q(e.volume.repsLow)}, ${q(e.volume.repsHigh)},
+                     ${q(e.volume.holdSecondsLow)}, ${q(e.volume.holdSecondsHigh)}, ${q(e.volume.maxOffset)},
+                     ${q(e.volume.perSide)}, ${q(e.loadRaw || null)}, ${q(e.loadKg)},
+                     ${q(e.dumbbellRaw || null)}, ${q(e.dumbbellKg)}, ${q(e.restSeconds)},
+                     ${q(e.cue || null)}, ${q(e.homeAlternative || null)})`,
+          );
+          lines++;
+        }
       }
     }
-    console.log(`  ${name} : ${sessions.length} séances, ${exerciseCount} lignes`);
+    console.log(`  ${name} : ${days.length} jours, ${lines} lignes`);
   }
 
-  await insertProgram(
-    "ppl",
-    "Musculation PPL -- Soir",
-    seed.ppl.weeks,
-    seed.ppl.days.map((day) => ({
-      weekNumber: day.weekNumber,
-      date: day.date,
-      slot: "salle",
-      label: day.sessionType,
-      heading: null,
-      isRestDay: day.isRestDay,
-      isTestDay: false,
-      exercises: day.exercises.map((e, index) => ({
-        orderLabel: e.order,
-        orderIndex: index,
-        supersetGroup: e.supersetGroup,
-        name: e.name,
-        sets: e.sets,
-        repsLow: e.repsLow,
-        repsHigh: e.repsHigh,
-        holdSeconds: null,
-        repsFromMaxRule: false,
-        perSide: e.perSide,
-        loadRaw: e.loadRaw || null,
-        dumbbellRaw: e.dumbbellRaw || null,
-        restSeconds: e.restSeconds,
-        cue: null,
-        homeAlternative: e.homeAlternative || null,
-      })),
-    })),
-  );
+  await insertProgram("ppl", "Musculation PPL -- Soir", seed.ppl.weeks, seed.ppl.days);
+  await insertProgram("calisthenie", "Calisthénie", seed.calisthenie.weeks, seed.calisthenie.days);
 
-  type ProgramSessionInput = Parameters<typeof insertProgram>[3][number];
-
-  const caliSessions: ProgramSessionInput[] = seed.calisthenie.days.flatMap((day): ProgramSessionInput[] => {
-    const isTestDay = /test/i.test(day.theme);
-    if (day.blocks.length === 0) {
-      return [
-        {
-          weekNumber: day.weekNumber,
-          date: day.date,
-          slot: "matin",
-          label: day.theme || "Repos",
-          heading: null,
-          isRestDay: day.isRestDay,
-          isTestDay,
-          exercises: [],
-        },
-      ];
-    }
-    return day.blocks.map((block) => ({
-      weekNumber: day.weekNumber,
-      date: day.date,
-      slot: block.slot,
-      label: day.theme,
-      heading: block.heading,
-      isRestDay: false,
-      isTestDay,
-      exercises: block.exercises.map((e, index) => ({
-        orderLabel: String(e.order),
-        orderIndex: index,
-        supersetGroup: null,
-        name: e.name,
-        sets: e.sets,
-        repsLow: e.repsLow,
-        repsHigh: e.repsHigh,
-        holdSeconds: e.holdSeconds,
-        repsFromMaxRule: e.repsFromMaxRule,
-        perSide: e.perSide,
-        loadRaw: null,
-        dumbbellRaw: null,
-        restSeconds: e.restSeconds,
-        cue: e.cueRaw || null,
-        homeAlternative: null,
-      })),
-    }));
-  });
-
-  await insertProgram("calisthenie", "Calisthénie", seed.calisthenie.weeks, caliSessions);
-
-  await db.execute(
-    `insert into settings (id) values (1) on conflict (id) do nothing`,
-  );
+  await db.execute("insert into settings (id) values (1) on conflict (id) do nothing");
 
   await db.close();
   console.log("\n✓ Référentiel importé.");

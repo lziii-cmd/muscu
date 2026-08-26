@@ -7,6 +7,7 @@ import { Badge, Card } from "@/components/ui";
 import { cn, formatDuration, formatKg, formatSeconds, SLOT_LABELS, type Slot } from "@/lib/utils";
 import { enqueue } from "@/lib/local/db";
 import { advanceDoubleProgression, bodyPartOf } from "@/lib/domain/progression";
+import { repsForMax } from "@/lib/domain/calisthenics";
 import { MISSED_REASON_LABELS, lateLogging, type MissedReason } from "@/lib/domain/adherence";
 
 /*
@@ -32,8 +33,10 @@ export interface PrescribedExercise {
   sets: number | null;
   repsLow: number | null;
   repsHigh: number | null;
-  holdSeconds: number | null;
-  repsFromMaxRule: boolean;
+  holdSecondsLow: number | null;
+  holdSecondsHigh: number | null;
+  /** Répétitions déduites du max courant : max − `maxOffset`. */
+  maxOffset: number | null;
   perSide: boolean;
   loadRaw: string | null;
   loadKg: number | null;
@@ -118,17 +121,36 @@ function initialEntry(exercise: PrescribedExercise, logged?: SessionData["logged
     holdSecondsDone:
       previous?.holdSecondsDone != null
         ? String(previous.holdSecondsDone)
-        : exercise.holdSeconds != null
-          ? String(exercise.holdSeconds)
+        : exercise.holdSecondsLow != null
+          ? String(exercise.holdSecondsLow)
           : "",
     machineNote: previous?.machineNote ?? "",
     skipReason: "",
   };
 }
 
-function prescriptionLabel(exercise: PrescribedExercise): string {
-  if (exercise.repsFromMaxRule) return `${exercise.sets ?? "?"} séries — reps = ton max − 1`;
-  if (exercise.holdSeconds !== null) return `${exercise.sets ?? 1} × ${exercise.holdSeconds} s`;
+/**
+ * Libellé de la prescription.
+ *
+ * Deux nuances que le programme distingue et qu'il ne faut pas écraser :
+ * une fourchette de tenue (« 20-30 s ») n'est pas une tenue unique, et le
+ * décalage sur le max vaut 1 les jours de force mais 2 le jeudi, journée de
+ * volume volontairement plus légère.
+ */
+function prescriptionLabel(exercise: PrescribedExercise, pullupMax: number): string {
+  if (exercise.maxOffset !== null) {
+    const reps = repsForMax(pullupMax, exercise.maxOffset);
+    return `${exercise.sets ?? "?"} × ${reps} (max ${pullupMax} − ${exercise.maxOffset})`;
+  }
+
+  if (exercise.holdSecondsLow !== null) {
+    const hold =
+      exercise.holdSecondsHigh === null || exercise.holdSecondsLow === exercise.holdSecondsHigh
+        ? `${exercise.holdSecondsLow} s`
+        : `${exercise.holdSecondsLow}-${exercise.holdSecondsHigh} s`;
+    return `${exercise.sets ?? 1} × ${hold}`;
+  }
+
   if (exercise.sets === null) return "—";
   const reps =
     exercise.repsLow === exercise.repsHigh
@@ -141,11 +163,14 @@ export function SessionScreen({
   date,
   session,
   isPast,
+  pullupMax,
   onSaved,
 }: {
   date: string;
   session: SessionData;
   isPast: boolean;
+  /** Max de tractions courant, pour résoudre les prescriptions « max − N ». */
+  pullupMax: number;
   onSaved?: () => void;
 }) {
   const [entries, setEntries] = useState<Record<number, EntryState>>(() =>
@@ -455,7 +480,7 @@ export function SessionScreen({
                           </p>
                         ) : (
                           <p className="mt-0.5 text-sm text-faint">
-                            {prescriptionLabel(exercise)}
+                            {prescriptionLabel(exercise, pullupMax)}
                             {exercise.restSeconds !== null
                               ? ` · repos ${formatSeconds(exercise.restSeconds)}`
                               : ""}
