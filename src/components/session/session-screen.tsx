@@ -80,6 +80,8 @@ export interface SessionData {
     rpe: number | null;
     note: string | null;
     missedReason: string | null;
+    /** Précision libre saisie avec le motif. */
+    missedNote: string | null;
     loggedAt: string | null;
     exercises: {
       programExerciseId: number | null;
@@ -184,6 +186,12 @@ function initialEntry(exercise: PrescribedExercise, logged?: SessionData["logged
  * seule la première était affichée, ce qui privait de repère toutes les lignes
  * aux haltères : 167 sur le programme de salle, 128 sur celui de la maison.
  */
+/** Libellé lisible d'un motif d'absence, ou null si le motif est inconnu. */
+function missedLabel(reason: string | null | undefined): string | null {
+  if (!reason) return null;
+  return MISSED_REASON_LABELS[reason as MissedReason] ?? reason;
+}
+
 function prescribedLoad(exercise: { loadRaw: string | null; dumbbellRaw: string | null }): string {
   const barre = exercise.loadRaw && exercise.loadRaw !== "--" ? exercise.loadRaw : "";
   if (barre !== "") return ` · prévu ${barre}`;
@@ -636,12 +644,30 @@ export function SessionScreen({
           </span>
           <div>
             <p className="font-medium">{missed ? "Séance marquée manquée" : "Séance enregistrée"}</p>
-            <p className="mt-1 text-sm text-muted">
-              {missed
-                ? "Aucun exercice conservé — c'est ce que veut dire « manquée »."
-                : `${doneCount}/${total} exercices faits`}
-              {!missed && elapsed > 0 ? ` · ${formatDuration(elapsed)}` : ""}
-            </p>
+
+            {missed ? (
+              <>
+                {/* Le motif est la seule information utile d'une séance ratée :
+                    c'est lui qui alimente la lecture des absences. */}
+                <p className="mt-1 text-sm text-muted">
+                  Motif :{" "}
+                  <span className="text-text">
+                    {missedLabel(session.logged?.missedReason) ?? "non précisé"}
+                  </span>
+                </p>
+                {session.logged?.missedNote ? (
+                  <p className="mt-0.5 text-sm text-faint">{session.logged.missedNote}</p>
+                ) : null}
+                <p className="mt-1 text-sm text-faint">
+                  Aucun exercice conservé — c&apos;est ce que veut dire « manquée ».
+                </p>
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-muted">
+                {doneCount}/{total} exercices faits
+                {elapsed > 0 ? ` · ${formatDuration(elapsed)}` : ""}
+              </p>
+            )}
             {late.isLate ? (
               <p className="mt-2">
                 <Badge tone="warning">{late.label}</Badge>

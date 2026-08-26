@@ -283,6 +283,38 @@ async function main() {
   }
 
   /*
+   * Une séance déclarée manquée doit afficher son motif.
+   *
+   * Elle n'a par définition aucun exercice à montrer : sans le motif, la carte
+   * se lit comme un enregistrement vide, c'est-à-dire comme une saisie perdue.
+   */
+  const manquee = await fetch(`${BASE}/api/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({
+      id: `smoke-manquee-${Date.now()}`,
+      kind: "session.miss",
+      payload: {
+        date: "2026-08-26",
+        slot: "salle",
+        status: "missed",
+        missedReason: "salle_indisponible",
+        loggedAt: new Date().toISOString(),
+      },
+    }),
+  });
+  const jour = await fetch(`${BASE}/api/jour/2026-08-26`, { headers: { cookie } });
+  const jourBody = jour.ok ? ((await jour.json()) as { sessions: { slot: string; logged: { status: string; missedReason: string | null } | null }[] }) : null;
+  const salle = jourBody?.sessions.find((session) => session.slot === "salle");
+
+  if (manquee.ok && salle?.logged?.status === "missed" && salle.logged.missedReason === "salle_indisponible") {
+    console.log("  ✓ séance manquée               motif conservé et renvoyé");
+  } else {
+    console.log(`  ✗ séance manquée               motif absent (${manquee.status})`);
+    failures++;
+  }
+
+  /*
    * Cloisonnement des données : deux comptes qui se pèsent le même jour ne
    * doivent jamais voir le poids de l'autre. C'est la propriété qui justifie
    * `user_id` dans les index d'unicité — sans lui, la seconde pesée entrerait
