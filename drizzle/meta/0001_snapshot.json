@@ -1,6 +1,6 @@
 {
-  "id": "c3715428-4316-49d2-9a41-a2fce1c7afe9",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "e5a811db-4f9c-43db-a821-0f8d5138d0ef",
+  "prevId": "c3715428-4316-49d2-9a41-a2fce1c7afe9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -240,6 +240,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "measure_label": {
+          "name": "measure_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'reps'"
+        },
+        "is_custom": {
+          "name": "is_custom",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {
@@ -1413,6 +1427,13 @@
           "notNull": true,
           "default": false
         },
+        "is_extra": {
+          "name": "is_extra",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "skip_reason": {
           "name": "skip_reason",
           "type": "skip_reason",
@@ -1661,6 +1682,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "session_status",
@@ -1817,6 +1844,12 @@
           "primaryKey": true,
           "notNull": true,
           "default": 1
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "password_hash": {
           "name": "password_hash",
@@ -2367,7 +2400,8 @@
       "values": [
         "salle",
         "matin",
-        "soir"
+        "soir",
+        "libre"
       ]
     }
   },

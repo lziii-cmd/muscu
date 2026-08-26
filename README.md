@@ -121,6 +121,7 @@ journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 | `npm run seed:build` | Reconstruit le seed depuis `PROGRAMME-COMPLET.md` |
 | `npm run smoke` | Test de fumée autonome (après `npm run build`) — tourne toujours sur PGlite, jamais sur Neon |
 | `npm run users -- password --user X --password "…"` | Remplace le mot de passe d'un compte |
+| `npm run users -- rename --user X --name "…"` | Change le nom affiché |
 | `npm run users -- delete --user X` | **Destructif** — supprime un compte et toutes ses données |
 
 ---

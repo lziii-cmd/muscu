@@ -4,6 +4,7 @@
  *   npm run users -- list
  *   npm run users -- create --user abdou --name Abdou --password "…" --role user
  *   npm run users -- password --user abdou --password "…"
+ *   npm run users -- rename --user abdou --name Abdou
  *   npm run users -- delete --user untel
  *
  * Les mots de passe passent par argument et ne sont jamais écrits dans le
@@ -90,6 +91,16 @@ async function main() {
     );
     if (rows.length === 0) fail(`Compte « ${username} » introuvable.`);
     console.log(`✓ Mot de passe de « ${username} » remplacé.`);
+  } else if (command === "rename") {
+    const displayName = (argument("name") ?? "").trim();
+    if (displayName === "") fail("Précise le nom affiché : --name Abdou");
+
+    const rows = await db.query(
+      `update users set display_name = ${q(displayName)}, updated_at = now()
+       where username = ${q(username)} returning id`,
+    );
+    if (rows.length === 0) fail(`Compte « ${username} » introuvable.`);
+    console.log(`✓ « ${username} » s'affiche désormais « ${displayName} ».`);
   } else if (command === "delete") {
     // La suppression emporte le programme et le journal du compte : les clés
     // étrangères sont en cascade.
@@ -97,7 +108,7 @@ async function main() {
     if (rows.length === 0) fail(`Compte « ${username} » introuvable.`);
     console.log(`✓ Compte « ${username} » supprimé, avec son programme et son journal.`);
   } else {
-    fail("Commande attendue : list | create | password | delete");
+    fail("Commande attendue : list | create | password | rename | delete");
   }
 
   await db.close();

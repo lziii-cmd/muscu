@@ -7,8 +7,7 @@ Dernière mise à jour : 2026-08-26
 - Dernière fonctionnalité travaillée : **comptes, rôles et cloisonnement**. Trois comptes prévus : `abdou`, `nourah` (utilisateurs), `admin` (gestion des comptes uniquement, aucun accès aux données d'entraînement des autres).
 - Prochaine fonctionnalité prévue : **importer le programme de Nourah** dès qu'il est fourni (`npm run db:seed -- --user nourah --seed …`). En attendant, son compte n'a pas de programme et la page *Programme* affiche un message explicite plutôt qu'une page vide.
 - Problèmes ouverts :
-  - **La base Neon porte encore l'ancien schéma** (table `settings`, pas de `users`) : l'application déployée ne peut pas s'y connecter tant que le schéma n'est pas repris. La remise à zéro a été bloquée par le garde-fou de l'environnement ; les commandes sont à lancer par l'utilisateur (voir la note de session du 26/08 — quatrième partie).
-  - Inventaire fait avant toute opération destructive : la base distante ne contenait **aucune donnée saisie** — une ligne de sommeil entièrement nulle et neuf lignes d'échelles identiques aux niveaux de départ du seed.
+  - Base Neon **migrée sans destruction** par `0002_comptes.sql` : le compte `abdou` créé sur le site déployé a été repris tel quel, avec son mot de passe et ses données. Les trois comptes existent, le programme d'Abdou est importé.
   - Les mots de passe initiaux ont transité par la conversation : **à changer au premier passage** depuis l'écran *Compte*. Un bandeau le rappelle tant que c'est le cas.
   - Les fiches d'exécution des exercices ne sont pas importées.
   - Les photos de progression n'ont pas de stockage branché.
@@ -68,6 +67,8 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Alternative maison, remplacement d'un exercice, exercices à unité libre | fait | Bouton *maison* toujours offert en salle ; corde à sauter comptée en sauts |
 | 2026-08-26 | **Multi-comptes** | fait | `users`, `user_id` sur 17 tables, 14 index re-cadrés, requêtes et synchronisation filtrées |
 | 2026-08-26 | Écran *Compte* + administration des comptes | fait | Changement de son mot de passe, création/réinitialisation/suppression côté admin, bandeau « mot de passe d'origine » |
+| 2026-08-26 | Migration `0002_comptes.sql` **additive** | fait | Répétée sur base neuve et sur une copie du scénario de production avant d'être appliquée à Neon |
+| 2026-08-26 | Déploiement Neon en multi-comptes | fait | 3 comptes, programme d'Abdou importé (299 séances), aucune donnée perdue |
 
 ## PROBLÈMES RENCONTRÉS & SOLUTIONS
 | Date | Problème | Cause | Solution appliquée |
@@ -131,7 +132,11 @@ Enfin, le rôle admin ne gère que les comptes. Gérer un compte n'est pas lire 
 
 Le cloisonnement a été vérifié bout en bout, pas seulement lu : deux comptes ont enregistré un poids différent le même jour, chacun ne voit que le sien. Le test de fumée contrôle désormais aussi qu'un compte ordinaire est refusé sur l'administration, par la page comme par l'API.
 
-Deux limites à la fin de cette partie. La remise à zéro du schéma Neon a été **bloquée par le garde-fou de l'environnement** : elle est à lancer par l'utilisateur. Et l'inventaire préalable de la base distante — fait avant, pas après — a montré qu'elle ne contenait aucune donnée saisie : une ligne de sommeil entièrement nulle, neuf lignes d'échelles identiques aux niveaux de départ du seed.
+Le déploiement a pris un autre chemin que prévu, et un meilleur. La remise à zéro du schéma Neon a été **refusée par le garde-fou de l'environnement**. Plutôt que d'insister, j'ai introspecté la base distante : elle était déjà à jour sur tout, sauf la partie comptes — et elle contenait un compte `abdou` créé depuis le site déployé, avec son mot de passe.
+
+D'où `0002_comptes.sql`, une migration **additive** : elle crée `users`, y reprend le compte décrit par `settings` avec son empreinte de mot de passe, rattache les lignes existantes à ce compte, re-cadre les index d'unicité, puis supprime `settings`. Rien n'est détruit. Elle a été répétée deux fois avant d'être appliquée : sur une base neuve (chaîne 0000 → 0001 → 0002, suivie du seed et du test de fumée) et sur une **copie du scénario de production** (ancien schéma + données représentatives), en vérifiant qu'aucune ligne ne se retrouvait sans propriétaire.
+
+Le blocage a donc produit le bon résultat : un chemin de migration réutilisable au prochain déploiement, là où la remise à zéro aurait été un geste unique et destructeur.
 
 ### 2026-08-26 — troisième partie
 L'utilisateur a relayé une relecture ligne par ligne de mon seed contre ses sources. Les charges de musculation étaient toutes bonnes (116 occurrences vérifiées), mais la partie calisthénie avait quatre défauts, dont deux sérieux. Je les ai vérifiés un par un contre le document plutôt que de les appliquer de confiance : **tous fondés**.
