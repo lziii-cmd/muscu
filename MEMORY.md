@@ -3,9 +3,9 @@
 Dernière mise à jour : 2026-08-26
 
 ## CONTEXTE ACTUEL
-- Où on en est : **application complète construite et vérifiée**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 27 tables, référentiel des 17 semaines importé. Typecheck, lint, 113 tests unitaires et test de fumée passent tous. Build en 12,6 s.
-- Dernière fonctionnalité travaillée : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
-- Prochaine fonctionnalité prévue : **branchement sur Neon** (l'utilisateur doit fournir `DATABASE_URL`), puis déploiement Vercel.
+- Où on en est : **application complète, reconstruite sur les PDF révisés du 26/08 à 02:07**, vérifiée. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 27 tables, référentiel des 17 semaines importé. Typecheck, lint, 113 tests unitaires et test de fumée passent tous. Build en 12,6 s.
+- Dernière fonctionnalité travaillée : intégration des **alternatives maison** (séance déplaçable plutôt que ratée) et reprise complète du seed sur les nouveaux documents. Avant : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
+- Prochaine fonctionnalité prévue : **push GitHub puis déploiement Vercel**. La base Neon est créée (projet « Muscu », région AWS Europe Central 1 Francfort, Postgres 18) ; `DATABASE_URL` reste à renseigner côté Vercel et en local.
 - Problèmes ouverts :
   - Aucun identifiant Neon fourni à ce jour : tout a été vérifié sur PGlite en local.
   - Les fiches d'exécution des exercices (position / exécution / erreur à éviter) ne sont pas importées : leur tableau PDF est trop désaligné pour une extraction fiable.
@@ -29,6 +29,10 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Auth mono-utilisateur, scrypt de `node:crypto` | Un seul compte ; évite une dépendance native à compiler | NextAuth, argon2 natif |
 | 2026-08-26 | PGlite en repli local quand `DATABASE_URL` est absente | Permet de développer et de tester sans identifiants Neon ni Docker | Exiger Neon dès le développement |
 | 2026-08-26 | Garde « pas de base locale » sur `VERCEL`, pas sur `NODE_ENV` | Un build de production tourne aussi en local (tests) ; le vrai risque est un déploiement sans base | Garde sur NODE_ENV |
+| 2026-08-26 | Extraction PDF en `pdftotext -table` et non `-layout` | `-table` préserve l'alignement des lignes ; `-layout` faisait dériver les colonnes de droite d'une ligne, imposant des heuristiques d'appariement fragiles — et incapables de lire la colonne « Alternative maison », qui contient elle-même des « 3 × 12 » | `-layout` + appariement par index |
+| 2026-08-26 | Semaine 1 du PPL **plus** transcrite à la main | En `-table` ses tableaux sont lisibles comme les autres ; la transcription manuelle était une dette de maintenance | Garder l'override |
+| 2026-08-26 | Échelles, objectifs et métriques de test **parsés** au lieu d'être transcrits | Ils ont changé entre deux révisions du document sans que rien ne le signale — exactement le risque à éviter | Retranscrire à la main |
+| 2026-08-26 | Séances maison exclues de la progression en charge | Consigne explicite du document : « ne compare pas ses performances à celles de la salle, ce sont deux échelles différentes » | Tout mélanger |
 | 2026-08-26 | `react/no-unescaped-entities` désactivée | Interface intégralement en français, l'apostrophe est un caractère courant ; React échappe déjà le JSX | Échapper chaque apostrophe |
 
 ## CE QUI A ÉTÉ FAIT
@@ -62,6 +66,10 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Base locale injoignable au lancement | PGlite bundlé par Turbopack : son WASM localisé via `import.meta.url` n'est plus résolu | `serverExternalPackages: ["@electric-sql/pglite"]` |
 | 2026-08-26 | Test de fumée en échec après la 1re exécution | PGlite est mono-processus : le script et le serveur ne voient pas les mêmes écritures | Test rendu autonome : base dédiée (`PGLITE_DIR`) et serveur propre |
 | 2026-08-26 | Faux échecs du test de fumée | React échappe les entités HTML (`Aujourd&#x27;hui`) | Décodage avant comparaison |
+| 2026-08-26 | **Seed construit sur des PDF périmés** | Deux versions révisées déposées à 02:07 pendant la construction ; mon dernier inventaire du dossier datait de 01:16 | Reprise complète : réextraction, réécriture des deux parseurs, re-seed. Leçon : réinspecter le dossier avant toute étape qui consomme les sources |
+| 2026-08-26 | Type de séance tronqué (« LEGS A » → « LEGS ») | `-table` insère des espaces à l'intérieur des titres ; ma découpe sur « 2 espaces ou plus » coupait au mauvais endroit | Normalisation des espaces au lieu d'une découpe |
+| 2026-08-26 | Titre de section absorbé par la dernière ligne d'un tableau | Bloc borné uniquement par les titres de jour et de semaine | Bornes élargies aux titres de section et intertitres |
+| 2026-08-26 | Parseur ancré sur le sommaire au lieu du corps | En `-table` tout est indenté : l'indentation ne distingue plus sommaire et corps | Repères pris sur la **dernière** occurrence |
 | 2026-08-26 | Erreurs de lint React 19 | `Date.now()` pendant le rendu, `setState` synchrone dans un effet | Compteur monotone, `useSyncExternalStore`, remontage par `key` |
 
 ## POINTS DE VIGILANCE
@@ -84,7 +92,16 @@ Dernière mise à jour : 2026-08-26
 
 ## NOTES DE SESSION
 
-### 2026-08-26
+### 2026-08-26 — seconde partie
+L'utilisateur a demandé si j'avais bien utilisé ses derniers fichiers. Vérification faite : **non**. Deux PDF révisés déposés à 02:07 pendant la construction, jamais vus. Le seed reposait sur les versions de 00:53.
+
+Reprise complète, et le contenu avait réellement changé : exercices de calisthénie différents (progressions plus accessibles), nouveau « Bloc 0 — Découverte », nouvelles sections (préparation des poignets, erreurs du débutant, objectifs réalistes), 8 échelles au lieu de 7, et surtout une **colonne « Alternative maison » sur chaque exercice de salle**, avec une section dédiée à l'entraînement à domicile.
+
+Cette colonne n'est pas cosmétique : elle transforme une séance manquée en séance déplacée. Elle a entraîné un champ `home_alternative`, un lieu de séance (`salle`/`maison`), une bascule dans l'écran de saisie, et une règle métier testée — la progression en charge ignore les séances maison.
+
+Le passage en `pdftotext -table` a par ailleurs permis de **supprimer** la transcription manuelle de la semaine 1 et les heuristiques d'appariement de colonnes : moins de code, moins de façons de se tromper.
+
+### 2026-08-26 — première partie
 Session unique et longue. Phases 0 à 4 enchaînées après feu vert explicite (« fais tout d'un coup, vérifie, corrige et reteste »), avec autorisation spéciale de mettre à jour MEMORY.md et SPEC.md.
 
 Les 3 PDF ont été **remplacés en cours de session** par des versions révisées : même structure, tableaux plus complets. Le seed part des nouvelles versions.

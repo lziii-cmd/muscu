@@ -1,7 +1,7 @@
 # SPEC.md — Plateforme de suivi d'entraînement
 
 Dernière mise à jour : 2026-08-26
-Statut : **implémenté et vérifié en local**. Reste à brancher sur Neon et à déployer.
+Statut : **implémenté et vérifié en local**, sur les documents révisés du 26/08. Reste à pousser sur GitHub, brancher Neon et déployer.
 
 ---
 
@@ -43,14 +43,17 @@ et il est couvert.
 27 tables. Migration : `drizzle/0000_init.sql`.
 
 ### Référentiel (semé, lu seul)
-`programs`, `program_weeks`, `program_sessions`, `program_exercises`, `exercises`,
-`ladders`, `ladder_levels`, `foods`, `checkpoints`.
+`programs`, `program_weeks`, `program_sessions`, `program_exercises` (dont `home_alternative`),
+`exercises`, `ladders`, `ladder_levels`, `targets`, `test_metrics`, `foods`, `checkpoints`.
+
+Les échelles, objectifs et métriques de test sont **extraits du document**, pas transcrits : ils ont
+changé entre deux révisions sans que rien ne le signale.
 
 Une séance prescrite = `program_sessions` avec un créneau (`salle` / `matin` / `soir`) :
 le programme de salle produit une séance par jour, la calisthénie deux.
 
 ### Journal réel
-- `sessions` — date de séance, créneau, statut, durée, ressenti, motif d'absence, **et `logged_at` distinct de `date`** : c'est cet écart qui produit le badge « enregistré avec du retard ».
+- `sessions` — date de séance, créneau, **lieu (salle/maison)**, statut, durée, ressenti, motif d'absence, **et `logged_at` distinct de `date`** : c'est cet écart qui produit le badge « enregistré avec du retard ».
 - `session_exercises` — **le niveau qui porte la case « fait / pas fait » et la charge en kg**, avec l'unité (barre/machine, par haltère, poids du corps) et la machine utilisée.
 - `session_sets` — détail série par série, **facultatif**.
 
@@ -147,7 +150,17 @@ Les consignes position/exécution/erreur ne sont pas encore importées.
 Installable sur PC, tablette, iPhone et Android. Écriture toujours en file d'attente locale,
 synchronisation idempotente au retour du réseau, séance du jour consultable depuis le cache.
 
-### 4.14 Photos de progression — non implémenté
+### 4.14 Séances à la maison — stable
+Le programme fournit un **équivalent maison pour chaque exercice de salle** (480 lignes), plus une
+section sur le matériel improvisé (barre de traction, sac à dos chargé, bidons d'eau). L'écran de
+séance propose une bascule **salle / maison** : en mode maison, chaque exercice affiche son
+équivalent et la séance est enregistrée comme telle.
+
+Conséquence, tirée du document : une séance maison **compte pour l'assiduité** — c'est tout son
+intérêt, elle évite de rater l'entraînement — mais elle est **exclue de la progression en charge**,
+le document précisant que les deux échelles ne se comparent pas.
+
+### 4.15 Photos de progression — non implémenté
 Stockage externe à trancher (Vercel Blob, seul poste potentiellement payant).
 
 ---
@@ -210,7 +223,7 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 |---|---|---|
 | Architecture | 8/10 | Domaine métier isolé et testé, hors-ligne pensé dès le départ. Le couplage entre le seed et le format des PDF reste un point faible. |
 | Qualité code | 8/10 | Typecheck et lint stricts, conventions homogènes, commentaires qui expliquent le pourquoi. Quelques pages longues. |
-| Tests | 7/10 | 113 tests unitaires sur toutes les règles métier, test de fumée sur 11 pages et l'API. Aucun test de parcours (interaction, hors-ligne réel). |
+| Tests | 7/10 | 116 tests unitaires sur toutes les règles métier, test de fumée sur 11 pages et l'API. Aucun test de parcours (interaction, hors-ligne réel). |
 | Sécurité | 8/10 | Faille haute corrigée, validation Zod sur toutes les écritures, scrypt, cookie chiffré, comparaison à temps constant. Reste un avertissement modéré sur un outil de développement. |
 | Performance | 8/10 | Build en 12,6 s, graphiques sans JS client, pages dynamiques légères (25–140 Ko). |
 | Maintenabilité | 8/10 | Règles métier lisibles et localisées, décisions documentées. Le parseur PDF demande de la vigilance à chaque révision des documents. |
