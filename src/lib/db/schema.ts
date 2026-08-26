@@ -128,6 +128,17 @@ export const users = pgTable(
      * personnes n'en est plus un.
      */
     usesDefaultPassword: boolean("uses_default_password").default(true).notNull(),
+    /**
+     * Stature, en centimètres. À ne pas confondre avec la mensuration
+     * « tour de taille » : celle-ci change avec l'entraînement, celle-là non.
+     * Sert à l'IMC et au rapport tour de taille / stature, plus parlant que le
+     * poids seul en recomposition.
+     */
+    heightCm: numeric("height_cm", { precision: 4, scale: 1 }),
+    /** Date de naissance, pour l'âge. Facultative. */
+    birthDate: date("birth_date"),
+    /** Poids visé, s'il y en a un. Affiché en repère sur la courbe de poids. */
+    targetWeightKg: numeric("target_weight_kg", { precision: 5, scale: 2 }),
     /** Objectif protéines, en grammes par kg de poids de corps. */
     proteinPerKgLow: numeric("protein_per_kg_low", { precision: 3, scale: 1 }).default("1.8").notNull(),
     proteinPerKgHigh: numeric("protein_per_kg_high", { precision: 3, scale: 1 })

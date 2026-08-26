@@ -205,3 +205,44 @@ export function trendOf(values: number[], thresholdPercent = 1): Trend {
   if (Math.abs(change) < thresholdPercent) return "stable";
   return change > 0 ? "hausse" : "baisse";
 }
+
+/**
+ * Indice de masse corporelle.
+ *
+ * Volontairement rendu sans commentaire de catégorie : l'IMC ne distingue pas
+ * le muscle de la graisse, et sur quelqu'un qui prend du muscle il monte
+ * pendant que la composition s'améliore. Il est affiché comme un repère parmi
+ * d'autres, jamais comme un verdict.
+ */
+export function bmi(weightKg: number, heightCm: number): number | null {
+  if (!Number.isFinite(weightKg) || !Number.isFinite(heightCm)) return null;
+  if (weightKg <= 0 || heightCm <= 0) return null;
+  const meters = heightCm / 100;
+  return Math.round((weightKg / (meters * meters)) * 10) / 10;
+}
+
+/**
+ * Rapport tour de taille / stature.
+ *
+ * Plus utile que l'IMC en recomposition : il ne bouge que si le tour de taille
+ * bouge, donc il suit la graisse abdominale et ignore le muscle pris ailleurs.
+ * Le repère communément retenu est « moins de 0,5 ».
+ */
+export function waistToHeight(waistCm: number, heightCm: number): number | null {
+  if (!Number.isFinite(waistCm) || !Number.isFinite(heightCm)) return null;
+  if (waistCm <= 0 || heightCm <= 0) return null;
+  return Math.round((waistCm / heightCm) * 100) / 100;
+}
+
+/** Âge en années révolues à une date donnée. */
+export function ageOn(birthDate: string, onDate: string): number | null {
+  const birth = new Date(`${birthDate}T00:00:00Z`);
+  const on = new Date(`${onDate}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime()) || Number.isNaN(on.getTime())) return null;
+  if (birth > on) return null;
+
+  let years = on.getUTCFullYear() - birth.getUTCFullYear();
+  const monthDiff = on.getUTCMonth() - birth.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && on.getUTCDate() < birth.getUTCDate())) years -= 1;
+  return years;
+}

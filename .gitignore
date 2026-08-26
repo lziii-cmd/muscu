@@ -40,9 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Base locale PGlite (développement et tests)
-.pglite/
-.pglite-smoke/
+# Bases locales PGlite (développement et tests). Le motif est large à dessein :
+# chaque vérification crée son propre dossier, PGlite étant mono-processus.
+.pglite*/
+
+# Texte extrait des PDF sources, reconstructible
+/data/extraits/
 
 # Configuration locale de lancement
 .claude/

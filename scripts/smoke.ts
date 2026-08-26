@@ -54,7 +54,7 @@ const PAGES: { path: string; expect: string[] }[] = [
   { path: "/exercices", expect: ["Exercices"] },
   { path: "/programme", expect: ["Programme", "Séances prévues", "semaine en cours"] },
   { path: "/seance/2026-08-26", expect: ["août"] },
-  { path: "/compte", expect: ["Compte", "Changer mon mot de passe"] },
+  { path: "/compte", expect: ["Smoke", "Profil", "Mot de passe", "Pesée du jour", "Fiche"] },
 ];
 
 /** Attend que le serveur réponde, ou abandonne. */
@@ -108,6 +108,11 @@ async function main() {
   const derived = await scryptAsync(password, salt, 64, { N: 16384, r: 8, p: 1 });
   const hash = `scrypt$${salt.toString("hex")}$${derived.toString("hex")}`;
 
+  const otherPassword = randomBytes(12).toString("hex");
+  const otherSalt = randomBytes(16);
+  const otherDerived = await scryptAsync(otherPassword, otherSalt, 64, { N: 16384, r: 8, p: 1 });
+  const otherHash = `scrypt$${otherSalt.toString("hex")}$${otherDerived.toString("hex")}`;
+
   const adminPassword = randomBytes(12).toString("hex");
   const adminSalt = randomBytes(16);
   const adminDerived = await scryptAsync(adminPassword, adminSalt, 64, { N: 16384, r: 8, p: 1 });
@@ -116,7 +121,8 @@ async function main() {
   await db.execute(
     `insert into users (username, password_hash, display_name, role, uses_default_password)
      values ('smoke', ${q(hash)}, 'Smoke', 'user', false),
-            ('smoke-admin', ${q(adminHash)}, 'Smoke admin', 'admin', false)`,
+            ('smoke-admin', ${q(adminHash)}, 'Smoke admin', 'admin', false),
+            ('smoke-autre', ${q(otherHash)}, 'Smoke autre', 'user', false)`,
   );
   await db.close();
 
@@ -246,6 +252,79 @@ async function main() {
   } else {
     console.log(`  ✗ /api/sync mutation invalide ${invalid.status} au lieu de 422`);
     failures++;
+  }
+
+  /*
+   * Une écriture passée par l'API doit être visible sur la page qui la lit.
+   *
+   * Ce contrôle vise un défaut précis : Next découpe pages et routes d'API en
+   * graphes de modules distincts, et un client de base mémorisé par module y
+   * est dupliqué. En local, cela donnait deux instances PGlite sur le même
+   * dossier — la synchronisation répondait « ok » et l'écran restait vide.
+   */
+  const pesee = await fetch(`${BASE}/api/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({
+      id: `smoke-poids-${Date.now()}`,
+      kind: "bodyweight.upsert",
+      payload: { date: "2026-08-26", weightKg: 74.2 },
+    }),
+  });
+  const corps = await fetch(`${BASE}/corps`, { headers: { cookie } });
+  const corpsBody = corps.ok ? decodeEntities(await corps.text()) : "";
+
+  if (pesee.ok && corpsBody.includes("74.2")) {
+    console.log("  ✓ écriture relue par la page  pesée visible sur /corps");
+  } else {
+    console.log(`  ✗ écriture relue par la page  sync ${pesee.status}, pesée absente de /corps`);
+    failures++;
+  }
+
+  /*
+   * Cloisonnement des données : deux comptes qui se pèsent le même jour ne
+   * doivent jamais voir le poids de l'autre. C'est la propriété qui justifie
+   * `user_id` dans les index d'unicité — sans lui, la seconde pesée entrerait
+   * en conflit avec la première au lieu de coexister.
+   */
+  const otherLogin = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "smoke-autre", password: otherPassword }),
+  });
+  const otherCookie = otherLogin.headers.get("set-cookie")?.split(";")[0];
+
+  if (!otherCookie) {
+    console.log("  ✗ cloisonnement               connexion du second compte impossible");
+    failures++;
+  } else {
+    await fetch(`${BASE}/api/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie: otherCookie },
+      body: JSON.stringify({
+        id: `smoke-poids-autre-${Date.now()}`,
+        kind: "bodyweight.upsert",
+        payload: { date: "2026-08-26", weightKg: 55.5 },
+      }),
+    });
+
+    const sien = await fetch(`${BASE}/corps`, { headers: { cookie: otherCookie } });
+    const sienBody = sien.ok ? decodeEntities(await sien.text()) : "";
+    const mien = await fetch(`${BASE}/corps`, { headers: { cookie } });
+    const mienBody = mien.ok ? decodeEntities(await mien.text()) : "";
+
+    const chacunLeSien =
+      sienBody.includes("55.5") &&
+      !sienBody.includes("74.2") &&
+      mienBody.includes("74.2") &&
+      !mienBody.includes("55.5");
+
+    if (chacunLeSien) {
+      console.log("  ✓ cloisonnement               chacun ne voit que sa pesée");
+    } else {
+      console.log("  ✗ cloisonnement               une pesée a franchi la frontière des comptes");
+      failures++;
+    }
   }
 
   /*

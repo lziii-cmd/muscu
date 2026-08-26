@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, max, min, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
 import { currentUserId } from "@/lib/auth/current-user";
 import type { Slot } from "@/lib/utils";
@@ -765,3 +765,32 @@ export async function getProgramOverview() {
   return { weeks, sessions, logged };
 }
 
+
+/**
+ * Bornes du programme du compte.
+ *
+ * Les dates ne sont plus supposées : chaque personne a les siennes, et une
+ * constante partagée décalerait les repères de semaine de celle dont le
+ * programme ne commence pas le même jour.
+ */
+export async function getProgramBounds(): Promise<{
+  startDate: string;
+  endDate: string;
+  weeks: number;
+} | null> {
+  const db = getDb();
+  const userId = await currentUserId();
+
+  const [row] = await db
+    .select({
+      startDate: min(schema.programWeeks.startDate),
+      endDate: max(schema.programWeeks.endDate),
+      weeks: max(schema.programWeeks.weekNumber),
+    })
+    .from(schema.programWeeks)
+    .innerJoin(schema.programs, eq(schema.programs.id, schema.programWeeks.programId))
+    .where(eq(schema.programs.userId, userId));
+
+  if (!row?.startDate || !row.endDate || !row.weeks) return null;
+  return { startDate: row.startDate, endDate: row.endDate, weeks: Number(row.weeks) };
+}

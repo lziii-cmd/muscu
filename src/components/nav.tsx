@@ -45,7 +45,7 @@ const SECONDARY = [
   { href: "/tests", label: "Tests & contrôles", icon: Dumbbell },
   { href: "/sommeil", label: "Sommeil", icon: BedDouble },
   { href: "/exercices", label: "Exercices", icon: BookOpen },
-  { href: "/compte", label: "Compte", icon: UserRound },
+  { href: "/compte", label: "Profil", icon: UserRound },
 ];
 
 function useIsActive() {

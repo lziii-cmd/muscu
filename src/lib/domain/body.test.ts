@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { movingAverage, recompositionVerdict, trendOf, weeklyChange } from "./body";
+import {
+  ageOn,
+  bmi,
+  movingAverage,
+  recompositionVerdict,
+  trendOf,
+  waistToHeight,
+  weeklyChange,
+} from "./body";
 
 describe("movingAverage", () => {
   it("lisse les pesées sur 7 jours", () => {
@@ -146,5 +154,42 @@ describe("recompositionVerdict", () => {
       strengthTrend: "hausse",
     });
     expect(result.verdict).toBe("donnees_insuffisantes");
+  });
+});
+
+describe("bmi", () => {
+  it("calcule l'indice au dixième près", () => {
+    expect(bmi(70, 175)).toBe(22.9);
+  });
+
+  it("refuse une taille ou un poids absurde", () => {
+    expect(bmi(70, 0)).toBeNull();
+    expect(bmi(0, 175)).toBeNull();
+    expect(bmi(Number.NaN, 175)).toBeNull();
+  });
+});
+
+describe("waistToHeight", () => {
+  it("rapporte le tour de taille à la stature", () => {
+    expect(waistToHeight(80, 175)).toBe(0.46);
+  });
+
+  it("refuse des valeurs nulles", () => {
+    expect(waistToHeight(80, 0)).toBeNull();
+  });
+});
+
+describe("ageOn", () => {
+  it("compte les années révolues", () => {
+    expect(ageOn("1996-08-27", "2026-08-26")).toBe(29);
+    expect(ageOn("1996-08-26", "2026-08-26")).toBe(30);
+  });
+
+  it("refuse une naissance postérieure à la date demandée", () => {
+    expect(ageOn("2027-01-01", "2026-08-26")).toBeNull();
+  });
+
+  it("refuse une date invalide", () => {
+    expect(ageOn("pas-une-date", "2026-08-26")).toBeNull();
   });
 });

@@ -23,6 +23,9 @@ export interface CurrentUser {
   displayName: string;
   role: "user" | "admin";
   usesDefaultPassword: boolean;
+  heightCm: number | null;
+  birthDate: string | null;
+  targetWeightKg: number | null;
   proteinPerKgLow: number;
   proteinPerKgHigh: number;
   waterTargetLiters: number;
@@ -42,6 +45,9 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     displayName: row.displayName,
     role: row.role as "user" | "admin",
     usesDefaultPassword: row.usesDefaultPassword,
+    heightCm: row.heightCm === null ? null : Number(row.heightCm),
+    birthDate: row.birthDate,
+    targetWeightKg: row.targetWeightKg === null ? null : Number(row.targetWeightKg),
     proteinPerKgLow: Number(row.proteinPerKgLow),
     proteinPerKgHigh: Number(row.proteinPerKgHigh),
     waterTargetLiters: Number(row.waterTargetLiters),

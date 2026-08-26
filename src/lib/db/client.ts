@@ -20,7 +20,22 @@ type Database =
   // chargement dynamique, on l'aligne donc sur celui de Neon.
   | ReturnType<typeof drizzleNeon<typeof schema>>;
 
-let cached: Database | null = null;
+/*
+ * Le client est mémorisé sur `globalThis`, pas dans une variable de module.
+ *
+ * Next découpe l'application en plusieurs graphes de modules — les pages d'un
+ * côté, les routes d'API de l'autre. Une variable de module y est dupliquée,
+ * ce qui donnerait DEUX instances PGlite sur le même dossier. Or PGlite est
+ * mono-processus : la page ne verrait alors jamais ce que la route vient
+ * d'écrire. Le symptôme est trompeur — la synchronisation répond « ok » et
+ * l'écran reste vide.
+ *
+ * Neon n'a pas ce problème (c'est un serveur distant partagé), mais passer par
+ * le même chemin évite d'avoir deux comportements à comprendre.
+ */
+const CLIENT_KEY = Symbol.for("muscu.db.client");
+
+type GlobalWithClient = typeof globalThis & { [CLIENT_KEY]?: Database };
 
 function createNeonClient(url: string): Database {
   return drizzleNeon(neon(url), { schema });
@@ -59,11 +74,14 @@ function createLocalClient(): Database {
 }
 
 export function getDb(): Database {
-  if (cached) return cached;
+  const container = globalThis as GlobalWithClient;
+  const existing = container[CLIENT_KEY];
+  if (existing) return existing;
 
   const url = process.env.DATABASE_URL;
-  cached = url ? createNeonClient(url) : createLocalClient();
-  return cached;
+  const client = url ? createNeonClient(url) : createLocalClient();
+  container[CLIENT_KEY] = client;
+  return client;
 }
 
 export { schema };
