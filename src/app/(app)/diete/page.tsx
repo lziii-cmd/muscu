@@ -5,8 +5,8 @@ import {
   getBodyweightEntries,
   getDayNutrition,
   getFoods,
-  getSettings,
 } from "@/lib/queries";
+import { requireUser } from "@/lib/auth/current-user";
 import { movingAverage } from "@/lib/domain/body";
 import { deficitTarget, oilStatus, proteinProgress, proteinTarget, waterStatus } from "@/lib/domain/nutrition";
 import { today } from "@/lib/utils";
@@ -23,11 +23,11 @@ export const dynamic = "force-dynamic";
 export default async function DietePage() {
   const date = today();
 
-  const [nutrition, weights, foods, settings] = await Promise.all([
+  const [nutrition, weights, foods, user] = await Promise.all([
     getDayNutrition(date),
     getBodyweightEntries(),
     getFoods(),
-    getSettings(),
+    requireUser(),
   ]);
 
   const averages = movingAverage(weights);
@@ -35,14 +35,14 @@ export default async function DietePage() {
 
   const target = proteinTarget(
     bodyweight ?? 75,
-    settings ? Number(settings.proteinPerKgLow) : 1.8,
-    settings ? Number(settings.proteinPerKgHigh) : 2.2,
+    user.proteinPerKgLow,
+    user.proteinPerKgHigh,
   );
   const protein = proteinProgress(nutrition.proteinG, target);
   const oil = oilStatus(nutrition.oilTablespoons);
   const water = waterStatus(
     nutrition.waterLiters,
-    settings ? Number(settings.waterTargetLiters) : 3.5,
+    user.waterTargetLiters,
   );
   const deficit = deficitTarget();
 

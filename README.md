@@ -43,22 +43,40 @@ développer sans identifiants ; refusé en production.
 npm run db:migrate
 ```
 
+Créer ensuite les comptes. Il n'y a pas d'inscription depuis l'application : sur une adresse
+publique, elle donnerait un accès à n'importe qui.
+
 ```bash
-npm run db:seed
+npm run users -- create --user abdou --name Abdou --password "…"
 ```
 
-Le seed importe : 111 exercices, 9 échelles de progression avec leur niveau de départ, 8 objectifs
-jalonnés, 11 métriques de test, 14 aliments du marché local, et les 17 semaines des deux programmes
-(299 séances prescrites, 892 lignes d'exercices, dont 480 avec leur alternative maison).
+```bash
+npm run users -- create --user admin --name Administration --password "…" --role admin
+```
+
+Puis importer le programme **d'un compte** :
+
+```bash
+npm run db:seed -- --user abdou
+```
+
+Le seed importe pour ce compte : 9 échelles de progression avec leur niveau de départ, 8 objectifs
+jalonnés, 11 métriques de test, 4 contrôles, et les 17 semaines des deux programmes (299 séances
+prescrites, 892 lignes d'exercices, dont 480 avec leur alternative maison). Le catalogue des 111
+exercices et les 14 aliments du marché local sont partagés : ce sont des référentiels neutres.
+
+Le seed ne touche qu'au programme du compte visé, et jamais au journal de séances — ni au sien, ni à
+celui des autres. On peut donc le relancer, et importer un programme différent par personne :
+
+```bash
+npm run db:seed -- --user nourah --seed data/seed/nourah.json
+```
 
 ### 4. Lancer
 
 ```bash
 npm run dev
 ```
-
-Au premier lancement, l'écran de connexion propose de **créer le compte** : identifiant et mot de
-passe.
 
 ---
 
@@ -96,11 +114,14 @@ journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 | `npm test` | Tests unitaires du domaine métier |
 | `npm run db:generate` | Génère une migration depuis le schéma |
 | `npm run db:migrate` | Applique les migrations |
-| `npm run db:seed` | Importe le référentiel |
+| `npm run db:seed -- --user X` | Importe le programme du compte X |
+| `npm run users -- list` | Liste les comptes |
+| `npm run users -- create --user X --password "…"` | Crée un compte (`--role admin` pour l'administration) |
 | `npm run db:reset` | **Destructif** — vide le schéma |
 | `npm run seed:build` | Reconstruit le seed depuis `PROGRAMME-COMPLET.md` |
 | `npm run smoke` | Test de fumée autonome (après `npm run build`) — tourne toujours sur PGlite, jamais sur Neon |
-| `npm run db:reset-password` | Efface le mot de passe local |
+| `npm run users -- password --user X --password "…"` | Remplace le mot de passe d'un compte |
+| `npm run users -- delete --user X` | **Destructif** — supprime un compte et toutes ses données |
 
 ---
 
@@ -116,12 +137,31 @@ src/
     domain/         règles métier pures et testées
     db/             schéma Drizzle et client
     local/          IndexedDB et file d'attente hors-ligne
-    auth/           session mono-utilisateur
+    auth/           session, comptes, cloisonnement des données
 scripts/
   lib/              parseur du document source
 data/
   seed/             seed produit + document de revue
 ```
+
+### Plusieurs personnes, des données cloisonnées
+
+Chaque compte a son propre programme, son propre journal, ses propres mesures. Le cloisonnement
+n'est pas laissé à la discrétion des pages : **la portée est décidée par le serveur**. Chaque
+requête commence par lire le compte de la session (`requireUser()`) et filtre dessus ; aucune page
+ne passe d'identifiant en paramètre, un appelant distrait ne peut donc pas exposer le journal du
+voisin. Les index d'unicité portent eux aussi sur le compte : deux personnes peuvent enregistrer
+une séance le même jour sur le même créneau.
+
+Le rôle `admin` sert **uniquement à gérer les comptes** — créer, renommer, remplacer un mot de
+passe oublié, supprimer. Il ne donne aucun accès aux données d'entraînement des autres. Un
+administrateur ne peut ni se retirer son propre rôle, ni supprimer son propre compte : ce sont les
+deux gestes qui fermeraient la porte de l'extérieur.
+
+Les mots de passe sont hachés avec scrypt (sel aléatoire, `N = 16384`) et comparés en temps
+constant. Personne — pas même l'administrateur — ne peut relire un mot de passe : il ne peut qu'en
+imposer un nouveau. Tant qu'un compte utilise son mot de passe d'origine, un bandeau le rappelle
+sur chaque écran ; il disparaît au premier changement.
 
 ### Le domaine métier est isolé
 
@@ -193,7 +233,23 @@ client. Sur une connexion mobile facturée au volume, c'est un choix produit.
 1. Pousser le dépôt sur GitHub, puis importer le projet dans Vercel.
 2. Renseigner `DATABASE_URL`, `DATABASE_URL_UNPOOLED` et `AUTH_SECRET` dans les variables
    d'environnement du projet.
-3. Lancer les migrations et le seed une fois, depuis ta machine, en pointant sur la base Neon.
+3. Depuis ta machine, en pointant sur la base Neon : lancer les migrations, créer les comptes, puis
+   importer le programme de chacun.
+
+```bash
+npm run db:migrate
+```
+
+```bash
+npm run users -- create --user abdou --name Abdou --password "…"
+```
+
+```bash
+npm run db:seed -- --user abdou
+```
+
+4. Se connecter, puis **changer immédiatement les mots de passe** depuis l'écran *Compte* : ceux
+   posés à la création ont transité par une ligne de commande et un canal de discussion.
 
 ## Installer la PWA
 

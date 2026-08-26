@@ -19,7 +19,8 @@ import {
  * - Charges en kg (numeric 6,2), tenues et repos en secondes, poids en kg.
  * - Le référentiel (programme, exercices, échelles) est semé et lu seul ;
  *   le journal est écrit par l'application.
- * - Application mono-utilisateur : pas de colonne user_id.
+ * - Chaque table du journal porte un `user_id` : deux personnes utilisent
+ *   l'application, avec chacune son programme et ses données.
  */
 
 // ---------------------------------------------------------------------------
@@ -100,32 +101,46 @@ export const measurementKindEnum = pgEnum("measurement_kind", [
 export const photoAngleEnum = pgEnum("photo_angle", ["face", "profil", "dos"]);
 
 // ---------------------------------------------------------------------------
-// Réglages et authentification (mono-utilisateur)
+// Comptes
 // ---------------------------------------------------------------------------
 
-export const settings = pgTable("settings", {
-  id: integer("id").primaryKey().default(1),
-  /** Identifiant de connexion, choisi au premier lancement. */
-  username: text("username"),
-  passwordHash: text("password_hash"),
-  displayName: text("display_name").default("Moi").notNull(),
-  /** Sert à calculer l'objectif protéines (1,8 à 2,2 g/kg). */
-  proteinPerKgLow: numeric("protein_per_kg_low", { precision: 3, scale: 1 }).default("1.8").notNull(),
-  proteinPerKgHigh: numeric("protein_per_kg_high", { precision: 3, scale: 1 })
-    .default("2.2")
-    .notNull(),
-  /** Cible de perte hebdomadaire en % du poids de corps. */
-  weeklyLossTargetLow: numeric("weekly_loss_target_low", { precision: 3, scale: 2 })
-    .default("0.30")
-    .notNull(),
-  weeklyLossTargetHigh: numeric("weekly_loss_target_high", { precision: 3, scale: 2 })
-    .default("0.50")
-    .notNull(),
-  waterTargetLiters: numeric("water_target_liters", { precision: 3, scale: 1 })
-    .default("3.5")
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+/** Rôle du compte : un administrateur gère les comptes, il ne s'entraîne pas forcément. */
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+
+/**
+ * Comptes de l'application.
+ *
+ * Chaque personne a son propre programme et son propre journal : rien n'est
+ * partagé entre comptes, hormis le catalogue d'exercices et la table des
+ * aliments, qui sont des référentiels neutres.
+ */
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    username: text("username").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    displayName: text("display_name").notNull(),
+    role: userRoleEnum("role").default("user").notNull(),
+    /**
+     * Vrai tant que le mot de passe est celui posé à la création du compte.
+     * Sert à afficher un rappel : un mot de passe initial connu de plusieurs
+     * personnes n'en est plus un.
+     */
+    usesDefaultPassword: boolean("uses_default_password").default(true).notNull(),
+    /** Objectif protéines, en grammes par kg de poids de corps. */
+    proteinPerKgLow: numeric("protein_per_kg_low", { precision: 3, scale: 1 }).default("1.8").notNull(),
+    proteinPerKgHigh: numeric("protein_per_kg_high", { precision: 3, scale: 1 })
+      .default("2.2")
+      .notNull(),
+    waterTargetLiters: numeric("water_target_liters", { precision: 3, scale: 1 })
+      .default("3.5")
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("users_username_key").on(table.username)],
+);
 
 // ---------------------------------------------------------------------------
 // Référentiel des exercices
@@ -166,13 +181,16 @@ export const ladders = pgTable(
   "ladders",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     description: text("description"),
     /** Niveau de départ, signalé en gras dans le document source. */
     startLevel: integer("start_level").default(1).notNull(),
   },
-  (table) => [uniqueIndex("ladders_slug_key").on(table.slug)],
+  (table) => [uniqueIndex("ladders_slug_key").on(table.userId, table.slug)],
 );
 
 export const ladderLevels = pgTable(
@@ -214,12 +232,15 @@ export const programs = pgTable(
   "programs",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     code: text("code").notNull(), // "ppl" | "calisthenie"
     name: text("name").notNull(),
     startDate: date("start_date").notNull(),
     endDate: date("end_date").notNull(),
   },
-  (table) => [uniqueIndex("programs_code_key").on(table.code)],
+  (table) => [uniqueIndex("programs_code_key").on(table.userId, table.code)],
 );
 
 export const programWeeks = pgTable(
@@ -318,6 +339,9 @@ export const sessions = pgTable(
   "sessions",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     programSessionId: integer("program_session_id").references(() => programSessions.id),
     /** Date à laquelle la séance a eu lieu. */
     date: date("date").notNull(),
@@ -346,7 +370,7 @@ export const sessions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("sessions_date_slot_key").on(table.date, table.slot),
+    uniqueIndex("sessions_date_slot_key").on(table.userId, table.date, table.slot),
     index("sessions_status_idx").on(table.status),
   ],
 );
@@ -420,27 +444,36 @@ export const bodyweightEntries = pgTable(
   "bodyweight_entries",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     weightKg: numeric("weight_kg", { precision: 5, scale: 2 }).notNull(),
     fasted: boolean("fasted").default(true).notNull(),
     note: text("note"),
   },
-  (table) => [uniqueIndex("bodyweight_date_key").on(table.date)],
+  (table) => [uniqueIndex("bodyweight_date_key").on(table.userId, table.date)],
 );
 
 export const measurements = pgTable(
   "measurements",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     kind: measurementKindEnum("kind").notNull(),
     valueCm: numeric("value_cm", { precision: 5, scale: 1 }).notNull(),
   },
-  (table) => [uniqueIndex("measurements_unique").on(table.date, table.kind)],
+  (table) => [uniqueIndex("measurements_unique").on(table.userId, table.date, table.kind)],
 );
 
 export const progressPhotos = pgTable("progress_photos", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
   angle: photoAngleEnum("angle").notNull(),
   url: text("url").notNull(),
@@ -451,12 +484,15 @@ export const checkpoints = pgTable(
   "checkpoints",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     label: text("label").notNull(),
     completed: boolean("completed").default(false).notNull(),
     note: text("note"),
   },
-  (table) => [uniqueIndex("checkpoints_date_key").on(table.date)],
+  (table) => [uniqueIndex("checkpoints_date_key").on(table.userId, table.date)],
 );
 
 /** Les 4 tests de force calisthénie. */
@@ -464,6 +500,9 @@ export const strengthTests = pgTable(
   "strength_tests",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     /** "tractions" | "dips" | "pompes" | "hspu" | "atr" | "front_lever" | "pistol" | "l_sit" | "dead_hang" */
     metric: text("metric").notNull(),
@@ -473,7 +512,7 @@ export const strengthTests = pgTable(
     level: integer("level"),
     note: text("note"),
   },
-  (table) => [uniqueIndex("strength_tests_unique").on(table.date, table.metric)],
+  (table) => [uniqueIndex("strength_tests_unique").on(table.userId, table.date, table.metric)],
 );
 
 /**
@@ -485,12 +524,15 @@ export const testMetrics = pgTable(
   "test_metrics",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     label: text("label").notNull(),
     unit: exerciseUnitEnum("unit").notNull(),
     orderIndex: integer("order_index").notNull(),
   },
-  (table) => [uniqueIndex("test_metrics_slug_key").on(table.slug)],
+  (table) => [uniqueIndex("test_metrics_slug_key").on(table.userId, table.slug)],
 );
 
 /**
@@ -501,6 +543,9 @@ export const targets = pgTable(
   "targets",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     movement: text("movement").notNull(),
     unit: exerciseUnitEnum("unit").notNull(),
@@ -510,7 +555,7 @@ export const targets = pgTable(
     /** Valeur de départ déclarée dans le document. */
     startLabel: text("start_label"),
   },
-  (table) => [uniqueIndex("targets_unique").on(table.slug, table.date)],
+  (table) => [uniqueIndex("targets_unique").on(table.userId, table.slug, table.date)],
 );
 
 // ---------------------------------------------------------------------------
@@ -539,11 +584,14 @@ export const mealLogs = pgTable(
   "meal_logs",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     slot: mealSlotEnum("slot").notNull(),
     note: text("note"),
   },
-  (table) => [uniqueIndex("meal_logs_unique").on(table.date, table.slot)],
+  (table) => [uniqueIndex("meal_logs_unique").on(table.userId, table.date, table.slot)],
 );
 
 export const mealItems = pgTable("meal_items", {
@@ -568,20 +616,26 @@ export const oilLogs = pgTable(
   "oil_logs",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     tablespoons: numeric("tablespoons", { precision: 4, scale: 1 }).default("0").notNull(),
   },
-  (table) => [uniqueIndex("oil_logs_date_key").on(table.date)],
+  (table) => [uniqueIndex("oil_logs_date_key").on(table.userId, table.date)],
 );
 
 export const waterLogs = pgTable(
   "water_logs",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     liters: numeric("liters", { precision: 3, scale: 1 }).default("0").notNull(),
   },
-  (table) => [uniqueIndex("water_logs_date_key").on(table.date)],
+  (table) => [uniqueIndex("water_logs_date_key").on(table.userId, table.date)],
 );
 
 /** Portions de riz, comptées en « poings ». */
@@ -589,10 +643,13 @@ export const riceLogs = pgTable(
   "rice_logs",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     fists: numeric("fists", { precision: 3, scale: 1 }).default("0").notNull(),
   },
-  (table) => [uniqueIndex("rice_logs_date_key").on(table.date)],
+  (table) => [uniqueIndex("rice_logs_date_key").on(table.userId, table.date)],
 );
 
 // ---------------------------------------------------------------------------
@@ -603,6 +660,9 @@ export const sleepLogs = pgTable(
   "sleep_logs",
   {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     /** Date du RÉVEIL. */
     date: date("date").notNull(),
     bedtime: text("bedtime"),
@@ -614,7 +674,7 @@ export const sleepLogs = pgTable(
     restingHr: integer("resting_hr"),
     note: text("note"),
   },
-  (table) => [uniqueIndex("sleep_logs_date_key").on(table.date)],
+  (table) => [uniqueIndex("sleep_logs_date_key").on(table.userId, table.date)],
 );
 
 /**
@@ -623,6 +683,9 @@ export const sleepLogs = pgTable(
  */
 export const alerts = pgTable("alerts", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
   /** "douleur_articulaire" | "baisse_performance" | "sommeil_degrade" | "fc_repos_haute" */
   kind: text("kind").notNull(),
@@ -634,6 +697,9 @@ export const alerts = pgTable("alerts", {
 /** Douleurs déclarées, pour détecter celles qui dépassent 48 h. */
 export const painLogs = pgTable("pain_logs", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
   area: text("area").notNull(),
   /** 1 à 5. */
@@ -661,7 +727,7 @@ export const syncMutations = pgTable(
 );
 
 export const schemaTables = {
-  settings,
+  users,
   exercises,
   ladders,
   ladderLevels,

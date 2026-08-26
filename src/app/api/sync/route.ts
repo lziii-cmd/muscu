@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/lib/db/client";
-import { isAuthenticated } from "@/lib/auth/session";
+import { currentUserId } from "@/lib/auth/current-user";
+import { getSession } from "@/lib/auth/session";
 
 /**
  * Point d'entrée unique des écritures.
@@ -11,6 +12,9 @@ import { isAuthenticated } from "@/lib/auth/session";
  * un identifiant généré côté client, enregistré dans `sync_mutations` : rejouer
  * une mutation déjà appliquée ne crée pas de doublon. C'est ce qui rend la
  * synchronisation sûre après une coupure réseau en pleine séance.
+ *
+ * Toute écriture porte le compte connecté, lu côté serveur. Le client n'envoie
+ * jamais d'identifiant de compte : il ne pourrait alors pas écrire chez l'autre.
  */
 
 export const runtime = "nodejs";
@@ -180,9 +184,11 @@ const mutation = z.discriminatedUnion("kind", [
 ]);
 
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
+  const session = await getSession();
+  if (typeof session.userId !== "number") {
     return NextResponse.json({ error: "non authentifié" }, { status: 401 });
   }
+  const userId = await currentUserId();
 
   let body: unknown;
   try {
@@ -214,7 +220,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await applyMutation(db, kind, payload);
+    await applyMutation(db, userId, kind, payload);
     await db.insert(schema.syncMutations).values({ id, kind }).onConflictDoNothing();
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -225,12 +231,17 @@ export async function POST(request: Request) {
 
 type Db = ReturnType<typeof getDb>;
 
-async function applyMutation(db: Db, kind: string, payload: unknown): Promise<void> {
+async function applyMutation(
+  db: Db,
+  userId: number,
+  kind: string,
+  payload: unknown,
+): Promise<void> {
   switch (kind) {
     case "session.upsert":
-      return applySessionUpsert(db, payload as z.infer<typeof sessionUpsert>);
+      return applySessionUpsert(db, userId, payload as z.infer<typeof sessionUpsert>);
     case "session.miss":
-      return applySessionMiss(db, payload as z.infer<typeof sessionMiss>);
+      return applySessionMiss(db, userId, payload as z.infer<typeof sessionMiss>);
 
     /**
      * Exercice créé par l'utilisateur, pour un entraînement hors programme.
@@ -276,9 +287,9 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       const p = payload as { date: string; weightKg: number; fasted: boolean };
       await db
         .insert(schema.bodyweightEntries)
-        .values({ date: p.date, weightKg: String(p.weightKg), fasted: p.fasted })
+        .values({ userId, date: p.date, weightKg: String(p.weightKg), fasted: p.fasted })
         .onConflictDoUpdate({
-          target: schema.bodyweightEntries.date,
+          target: [schema.bodyweightEntries.userId, schema.bodyweightEntries.date],
           set: { weightKg: String(p.weightKg), fasted: p.fasted },
         });
       return;
@@ -288,9 +299,9 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       const p = payload as { date: string; kind: "taille" | "bras" | "cuisse" | "poitrine"; valueCm: number };
       await db
         .insert(schema.measurements)
-        .values({ date: p.date, kind: p.kind, valueCm: String(p.valueCm) })
+        .values({ userId, date: p.date, kind: p.kind, valueCm: String(p.valueCm) })
         .onConflictDoUpdate({
-          target: [schema.measurements.date, schema.measurements.kind],
+          target: [schema.measurements.userId, schema.measurements.date, schema.measurements.kind],
           set: { valueCm: String(p.valueCm) },
         });
       return;
@@ -300,8 +311,11 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       const p = payload as { date: string; value: number };
       await db
         .insert(schema.oilLogs)
-        .values({ date: p.date, tablespoons: String(p.value) })
-        .onConflictDoUpdate({ target: schema.oilLogs.date, set: { tablespoons: String(p.value) } });
+        .values({ userId, date: p.date, tablespoons: String(p.value) })
+        .onConflictDoUpdate({
+          target: [schema.oilLogs.userId, schema.oilLogs.date],
+          set: { tablespoons: String(p.value) },
+        });
       return;
     }
 
@@ -309,8 +323,11 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       const p = payload as { date: string; value: number };
       await db
         .insert(schema.waterLogs)
-        .values({ date: p.date, liters: String(p.value) })
-        .onConflictDoUpdate({ target: schema.waterLogs.date, set: { liters: String(p.value) } });
+        .values({ userId, date: p.date, liters: String(p.value) })
+        .onConflictDoUpdate({
+          target: [schema.waterLogs.userId, schema.waterLogs.date],
+          set: { liters: String(p.value) },
+        });
       return;
     }
 
@@ -318,8 +335,11 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       const p = payload as { date: string; value: number };
       await db
         .insert(schema.riceLogs)
-        .values({ date: p.date, fists: String(p.value) })
-        .onConflictDoUpdate({ target: schema.riceLogs.date, set: { fists: String(p.value) } });
+        .values({ userId, date: p.date, fists: String(p.value) })
+        .onConflictDoUpdate({
+          target: [schema.riceLogs.userId, schema.riceLogs.date],
+          set: { fists: String(p.value) },
+        });
       return;
     }
 
@@ -341,8 +361,11 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       };
       await db
         .insert(schema.sleepLogs)
-        .values({ date: p.date, ...values })
-        .onConflictDoUpdate({ target: schema.sleepLogs.date, set: values });
+        .values({ userId, date: p.date, ...values })
+        .onConflictDoUpdate({
+          target: [schema.sleepLogs.userId, schema.sleepLogs.date],
+          set: values,
+        });
       return;
     }
 
@@ -355,6 +378,7 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
         note?: string | null;
       };
       await db.insert(schema.painLogs).values({
+        userId,
         date: p.date,
         area: p.area,
         intensity: p.intensity,
@@ -369,13 +393,14 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       await db
         .insert(schema.strengthTests)
         .values({
+          userId,
           date: p.date,
           metric: p.metric,
           value: p.value === null || p.value === undefined ? null : String(p.value),
           level: p.level ?? null,
         })
         .onConflictDoUpdate({
-          target: [schema.strengthTests.date, schema.strengthTests.metric],
+          target: [schema.strengthTests.userId, schema.strengthTests.date, schema.strengthTests.metric],
           set: {
             value: p.value === null || p.value === undefined ? null : String(p.value),
             level: p.level ?? null,
@@ -386,6 +411,13 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
 
     case "ladder.upsert": {
       const p = payload as { ladderId: number; currentLevel: number; cleanStreak: number };
+      // L'échelle appartient à un compte : on refuse d'écrire sur celle d'un autre.
+      const [ladder] = await db
+        .select({ id: schema.ladders.id })
+        .from(schema.ladders)
+        .where(and(eq(schema.ladders.id, p.ladderId), eq(schema.ladders.userId, userId)));
+      if (!ladder) throw new Error("échelle inconnue pour ce compte");
+
       await db
         .insert(schema.ladderProgress)
         .values({ ladderId: p.ladderId, currentLevel: p.currentLevel, cleanStreak: p.cleanStreak })
@@ -411,9 +443,9 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
       };
       const [meal] = await db
         .insert(schema.mealLogs)
-        .values({ date: p.date, slot: p.slot, note: p.note ?? null })
+        .values({ userId, date: p.date, slot: p.slot, note: p.note ?? null })
         .onConflictDoUpdate({
-          target: [schema.mealLogs.date, schema.mealLogs.slot],
+          target: [schema.mealLogs.userId, schema.mealLogs.date, schema.mealLogs.slot],
           set: { note: p.note ?? null },
         })
         .returning({ id: schema.mealLogs.id });
@@ -436,12 +468,17 @@ async function applyMutation(db: Db, kind: string, payload: unknown): Promise<vo
   }
 }
 
-async function applySessionUpsert(db: Db, p: z.infer<typeof sessionUpsert>): Promise<void> {
+async function applySessionUpsert(
+  db: Db,
+  userId: number,
+  p: z.infer<typeof sessionUpsert>,
+): Promise<void> {
   const loggedAt = p.loggedAt ? new Date(p.loggedAt) : new Date();
 
   const [session] = await db
     .insert(schema.sessions)
     .values({
+      userId,
       date: p.date,
       slot: p.slot,
       programSessionId: p.programSessionId ?? null,
@@ -456,7 +493,7 @@ async function applySessionUpsert(db: Db, p: z.infer<typeof sessionUpsert>): Pro
       loggedAt,
     })
     .onConflictDoUpdate({
-      target: [schema.sessions.date, schema.sessions.slot],
+      target: [schema.sessions.userId, schema.sessions.date, schema.sessions.slot],
       set: {
         status: p.status,
         location: p.location,
@@ -503,7 +540,11 @@ async function applySessionUpsert(db: Db, p: z.infer<typeof sessionUpsert>): Pro
   }
 }
 
-async function applySessionMiss(db: Db, p: z.infer<typeof sessionMiss>): Promise<void> {
+async function applySessionMiss(
+  db: Db,
+  userId: number,
+  p: z.infer<typeof sessionMiss>,
+): Promise<void> {
   const values = {
     status: p.status,
     missedReason: p.missedReason,
@@ -515,6 +556,7 @@ async function applySessionMiss(db: Db, p: z.infer<typeof sessionMiss>): Promise
   await db
     .insert(schema.sessions)
     .values({
+      userId,
       date: p.date,
       slot: p.slot,
       programSessionId: p.programSessionId ?? null,
@@ -522,7 +564,7 @@ async function applySessionMiss(db: Db, p: z.infer<typeof sessionMiss>): Promise
       ...values,
     })
     .onConflictDoUpdate({
-      target: [schema.sessions.date, schema.sessions.slot],
+      target: [schema.sessions.userId, schema.sessions.date, schema.sessions.slot],
       set: values,
     });
 
@@ -530,7 +572,13 @@ async function applySessionMiss(db: Db, p: z.infer<typeof sessionMiss>): Promise
   const [row] = await db
     .select({ id: schema.sessions.id })
     .from(schema.sessions)
-    .where(and(eq(schema.sessions.date, p.date), eq(schema.sessions.slot, p.slot)));
+    .where(
+      and(
+        eq(schema.sessions.date, p.date),
+        eq(schema.sessions.slot, p.slot),
+        eq(schema.sessions.userId, userId),
+      ),
+    );
 
   if (row) {
     await db.delete(schema.sessionExercises).where(eq(schema.sessionExercises.sessionId, row.id));

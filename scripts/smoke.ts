@@ -54,6 +54,7 @@ const PAGES: { path: string; expect: string[] }[] = [
   { path: "/exercices", expect: ["Exercices"] },
   { path: "/programme", expect: ["Programme", "Séances prévues", "semaine en cours"] },
   { path: "/seance/2026-08-26", expect: ["août"] },
+  { path: "/compte", expect: ["Compte", "Changer mon mot de passe"] },
 ];
 
 /** Attend que le serveur réponde, ou abandonne. */
@@ -107,13 +108,21 @@ async function main() {
   const derived = await scryptAsync(password, salt, 64, { N: 16384, r: 8, p: 1 });
   const hash = `scrypt$${salt.toString("hex")}$${derived.toString("hex")}`;
 
-  await db.execute(`insert into settings (id) values (1) on conflict (id) do nothing`);
-  await db.execute(`update settings set password_hash = ${q(hash)}, username = 'smoke' where id = 1`);
+  const adminPassword = randomBytes(12).toString("hex");
+  const adminSalt = randomBytes(16);
+  const adminDerived = await scryptAsync(adminPassword, adminSalt, 64, { N: 16384, r: 8, p: 1 });
+  const adminHash = `scrypt$${adminSalt.toString("hex")}$${adminDerived.toString("hex")}`;
+
+  await db.execute(
+    `insert into users (username, password_hash, display_name, role, uses_default_password)
+     values ('smoke', ${q(hash)}, 'Smoke', 'user', false),
+            ('smoke-admin', ${q(adminHash)}, 'Smoke admin', 'admin', false)`,
+  );
   await db.close();
 
   console.log("  import du référentiel…");
   await new Promise<void>((resolve, reject) => {
-    const seed = spawn("npx", ["tsx", "scripts/seed.ts"], {
+    const seed = spawn("npx", ["tsx", "scripts/seed.ts", "--user", "smoke"], {
       env: { ...process.env, PGLITE_DIR, DATABASE_URL: "", DATABASE_URL_UNPOOLED: "" },
       stdio: "inherit",
       shell: true,
@@ -151,7 +160,7 @@ async function main() {
   const login = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: "smoke", password, create: false }),
+    body: JSON.stringify({ username: "smoke", password }),
   });
 
   if (!login.ok) {
@@ -237,6 +246,51 @@ async function main() {
   } else {
     console.log(`  ✗ /api/sync mutation invalide ${invalid.status} au lieu de 422`);
     failures++;
+  }
+
+  /*
+   * Cloisonnement : un compte ordinaire ne doit pas atteindre l'administration,
+   * ni par la page ni par l'API. C'est la garantie qui empêche l'un des comptes
+   * de remettre à zéro le mot de passe de l'autre.
+   */
+  const forbiddenPage = await fetch(`${BASE}/admin`, { headers: { cookie }, redirect: "manual" });
+  if (forbiddenPage.status === 307 || forbiddenPage.status === 302) {
+    console.log("  ✓ /admin sans le rôle         redirigé comme attendu");
+  } else {
+    console.log(`  ✗ /admin sans le rôle         ${forbiddenPage.status} au lieu d'une redirection`);
+    failures++;
+  }
+
+  const forbiddenApi = await fetch(`${BASE}/api/admin/users`, { headers: { cookie } });
+  if (forbiddenApi.status === 403) {
+    console.log("  ✓ /api/admin/users sans rôle  403 comme attendu");
+  } else {
+    console.log(`  ✗ /api/admin/users sans rôle  ${forbiddenApi.status} au lieu de 403`);
+    failures++;
+  }
+
+  const adminLogin = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "smoke-admin", password: adminPassword }),
+  });
+  const adminCookie = adminLogin.headers.get("set-cookie")?.split(";")[0];
+
+  if (!adminCookie) {
+    console.log("  ✗ connexion administrateur    aucun cookie renvoyé");
+    failures++;
+  } else {
+    const adminPage = await fetch(`${BASE}/admin`, {
+      headers: { cookie: adminCookie },
+      redirect: "manual",
+    });
+    const adminBody = adminPage.ok ? decodeEntities(await adminPage.text()) : "";
+    if (adminPage.ok && adminBody.includes("Comptes") && adminBody.includes("Nouveau compte")) {
+      console.log("  ✓ /admin                      liste des comptes");
+    } else {
+      console.log(`  ✗ /admin                      HTTP ${adminPage.status}`);
+      failures++;
+    }
   }
 
   stopServer();

@@ -1,7 +1,10 @@
 # SPEC.md — Plateforme de suivi d'entraînement
 
 Dernière mise à jour : 2026-08-26
-Statut : **implémenté et vérifié en local**, sur `PROGRAMME-COMPLET.md` (source de vérité). Reste à pousser sur GitHub, brancher Neon et déployer.
+Statut : **implémenté et vérifié en local**, sur `PROGRAMME-COMPLET.md` (source de vérité).
+Application **multi-comptes** : chaque personne a son programme et son journal.
+Reste à reprendre le schéma de la base Neon (elle porte encore la version mono-compte) et à
+importer le programme de Nourah.
 
 ---
 
@@ -41,7 +44,17 @@ et il est couvert.
 
 ## 3. Modèle de données
 
-30 tables. Migration : `drizzle/0000_init.sql`.
+29 tables. Migration : `drizzle/0000_init.sql`.
+
+### Comptes
+`users` : identifiant unique, empreinte scrypt du mot de passe, nom affiché, rôle (`user` /
+`admin`), indicateur « mot de passe d'origine encore en place », et les cibles personnelles de
+diète (protéines par kg, eau).
+
+**17 tables portent `user_id`** — tout le référentiel personnel et tout le journal — et **14 index
+d'unicité** ont été re-cadrés sur le compte : sans cela, deux personnes ne pourraient pas
+enregistrer une séance le même jour sur le même créneau. `exercises` et `foods` restent partagés :
+ce sont des référentiels neutres.
 
 ### Référentiel (semé, lu seul)
 `programs`, `program_weeks`, `program_sessions`, `program_exercises` (dont `home_alternative`),
@@ -177,7 +190,24 @@ le document précisant que les deux échelles ne se comparent pas.
 Les 17 semaines, tous les jours, ce qui est prévu et ce qui est enregistré. Chaque jour est
 cliquable, y compris passé. Un encart « à rattraper » liste les séances prescrites et non saisies.
 
-### 4.17 Photos de progression — non implémenté
+### 4.17 Comptes et cloisonnement — stable
+Connexion par identifiant et mot de passe ; **pas d'inscription** depuis l'application, l'adresse
+étant publique. Chaque compte ne voit que ses données : la portée est décidée par le serveur
+(`requireUser()`), jamais passée en paramètre par une page.
+
+Écran *Compte* : identité, changement de son propre mot de passe (l'ancien est redemandé),
+déconnexion. Tant qu'un compte utilise son mot de passe d'origine, un bandeau le rappelle sur tous
+les écrans.
+
+Écran *Comptes*, réservé au rôle `admin` : lister, créer, imposer un nouveau mot de passe,
+supprimer. Le rôle ne donne **aucun** accès aux données d'entraînement des autres. Un
+administrateur ne peut ni se retirer son rôle ni supprimer son propre compte. Un compte supprimé
+emporte son programme et son journal (clés étrangères en cascade).
+
+En ligne de commande : `npm run users -- list | create | password | delete`, nécessaire pour créer
+le tout premier compte, quand personne ne peut encore se connecter.
+
+### 4.18 Photos de progression — non implémenté
 Stockage externe à trancher (Vercel Blob, seul poste potentiellement payant).
 
 ---
@@ -192,9 +222,9 @@ Stockage externe à trancher (Vercel Blob, seul poste potentiellement payant).
 | UI | **Tailwind v4** + composants maison | Thème sombre par défaut (séance à 23h) |
 | Graphiques | **SVG pur** | Rendu serveur, aucun JS client — données mobiles coûteuses |
 | Hors-ligne | **Dexie** (IndexedDB) + file d'attente | Service worker écrit à la main |
-| Auth | **iron-session** + scrypt (`node:crypto`) | Mono-utilisateur, sans dépendance native |
+| Auth | **iron-session** + scrypt (`node:crypto`) | Multi-comptes, sans dépendance native |
 | Validation | **Zod 4** | Partagée client/serveur sur l'API de synchronisation |
-| Tests | **Vitest** (113 tests) + test de fumée | Domaine métier couvert systématiquement |
+| Tests | **Vitest** (120 tests) + test de fumée | Domaine métier couvert systématiquement |
 
 ---
 
@@ -240,8 +270,8 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 |---|---|---|
 | Architecture | 8/10 | Domaine métier isolé et testé, hors-ligne pensé dès le départ. Le couplage entre le seed et le format des PDF reste un point faible. |
 | Qualité code | 8/10 | Typecheck et lint stricts, conventions homogènes, commentaires qui expliquent le pourquoi. Quelques pages longues. |
-| Tests | 8/10 | 120 tests unitaires sur toutes les règles métier, test de fumée sur 11 pages et l'API. Aucun test de parcours (interaction, hors-ligne réel). |
-| Sécurité | 8/10 | Faille haute corrigée, validation Zod sur toutes les écritures, scrypt, cookie chiffré, comparaison à temps constant. Reste un avertissement modéré sur un outil de développement. |
+| Tests | 8/10 | 120 tests unitaires sur toutes les règles métier, test de fumée sur 13 pages et 7 comportements d'API, dont le refus de l'administration à un compte ordinaire. Aucun test de parcours (interaction, hors-ligne réel). |
+| Sécurité | 8,5/10 | Faille haute corrigée, validation Zod sur toutes les écritures, scrypt, cookie chiffré, comparaison à temps constant, cloisonnement des comptes imposé côté serveur et vérifié bout en bout. Reste : les mots de passe initiaux, à changer au premier passage, et un avertissement modéré sur un outil de développement. |
 | Performance | 8/10 | Build en 12,6 s, graphiques sans JS client, pages dynamiques légères (25–140 Ko). |
 | Maintenabilité | 8/10 | Règles métier lisibles et localisées, décisions documentées. Le parseur PDF demande de la vigilance à chaque révision des documents. |
 | Infrastructure | 7/10 | Prêt pour Vercel mais **jamais déployé ni testé sur Neon** ; aucune CI. |
@@ -251,9 +281,10 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 
 ## 10. Reste à faire
 
-1. **Créer la base Neon** et renseigner `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `AUTH_SECRET`.
-2. Relire `data/seed/REVUE.md`, puis `npm run db:migrate` et `npm run db:seed` sur Neon.
-3. Déployer sur Vercel et installer la PWA sur téléphone.
+1. **Reprendre le schéma Neon** : il porte encore la version mono-compte (`settings`, pas de
+   `users`). Inventaire fait avant : aucune donnée saisie à préserver.
+2. Créer les trois comptes, importer le programme d'Abdou, **changer les mots de passe initiaux**.
+3. Importer le programme de Nourah dès qu'il est fourni.
 4. Importer les fiches d'exécution des exercices.
 5. Brancher le stockage des photos de progression.
 6. Ajouter des tests de parcours, notamment du mode hors-ligne réel.

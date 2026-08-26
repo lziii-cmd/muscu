@@ -1,11 +1,16 @@
 /**
- * Importe le référentiel en base : exercices, échelles, objectifs, métriques de
- * test, aliments, jalons, et les 17 semaines des deux programmes.
+ * Importe le programme d'un compte : exercices, échelles, objectifs, métriques
+ * de test, jalons, et les 17 semaines.
  *
- *   npm run db:seed
+ *   npm run db:seed -- --user abdou
+ *   npm run db:seed -- --user nourah --seed data/seed/nourah.json
  *
- * Idempotent : le référentiel est réécrit à chaque exécution, le journal des
- * séances réalisées n'est jamais touché.
+ * Chaque personne a son propre programme : le seed vise donc un compte, et ne
+ * touche qu'à ses données. Le catalogue d'exercices et la table des aliments
+ * sont partagés, ce sont des référentiels neutres.
+ *
+ * Idempotent : le référentiel du compte est réécrit à chaque exécution, son
+ * journal de séances n'est jamais touché.
  */
 import { readFileSync } from "node:fs";
 import { openDatabase, q } from "./db";
@@ -54,11 +59,35 @@ function groupOf(label: string): string {
   return "autre";
 }
 
+/** `--user abcd` -> "abcd" */
+function argument(name: string): string | null {
+  const index = process.argv.indexOf(`--${name}`);
+  return index === -1 ? null : (process.argv[index + 1] ?? null);
+}
+
 async function main() {
+  const username = (argument("user") ?? "").trim().toLowerCase();
+  if (username === "") {
+    console.error("✗ Précise le compte visé : npm run db:seed -- --user abdou");
+    process.exit(1);
+  }
+
+  const seedFile = argument("seed") ?? "data/seed/programme.json";
+
   const db = await openDatabase();
   console.log(`Base : ${db.label}`);
 
-  const seed: SeedFile = JSON.parse(readFileSync("data/seed/programme.json", "utf8"));
+  const [account] = await db.query<{ id: number; display_name: string }>(
+    `select id, display_name from users where username = ${q(username)}`,
+  );
+  if (!account) {
+    console.error(`✗ Compte « ${username} » introuvable. Crée-le avec npm run users:create.`);
+    process.exit(1);
+  }
+  const userId = account.id;
+
+  const seed: SeedFile = JSON.parse(readFileSync(seedFile, "utf8"));
+  console.log(`Compte : ${account.display_name} (${username})`);
   console.log(`Source : ${seed.source}`);
 
   // -------------------------------------------------------------------------
@@ -107,21 +136,30 @@ async function main() {
   console.log(`  ${exercises.size} exercices distincts`);
 
   // -------------------------------------------------------------------------
-  // Réécriture du référentiel (le journal n'est pas touché).
+  // Réécriture du programme de CE compte. Les autres comptes et le journal des
+  // séances réalisées ne sont pas touchés.
   // -------------------------------------------------------------------------
-  for (const table of [
-    "program_exercises",
-    "program_sessions",
-    "program_weeks",
-    "programs",
-    "ladder_levels",
-    "ladders",
-    "foods",
-    "targets",
-    "test_metrics",
-  ]) {
-    await db.execute(`delete from ${table}`);
-  }
+  await db.execute(`
+    delete from program_exercises where program_session_id in (
+      select ps.id from program_sessions ps
+      join programs p on p.id = ps.program_id
+      where p.user_id = ${userId})`);
+  await db.execute(`
+    delete from program_sessions where program_id in (
+      select id from programs where user_id = ${userId})`);
+  await db.execute(`
+    delete from program_weeks where program_id in (
+      select id from programs where user_id = ${userId})`);
+  await db.execute(`delete from programs where user_id = ${userId}`);
+  await db.execute(`
+    delete from ladder_levels where ladder_id in (
+      select id from ladders where user_id = ${userId})`);
+  await db.execute(`delete from ladders where user_id = ${userId}`);
+  await db.execute(`delete from targets where user_id = ${userId}`);
+  await db.execute(`delete from test_metrics where user_id = ${userId}`);
+
+  // Le catalogue d'aliments est partagé : on le réécrit une seule fois.
+  await db.execute("delete from foods");
 
   for (const e of exercises.values()) {
     await db.execute(
@@ -144,8 +182,8 @@ async function main() {
   // -------------------------------------------------------------------------
   for (const ladder of seed.ladders) {
     const [{ id }] = await db.query<{ id: number }>(
-      `insert into ladders (slug, name, description, start_level)
-       values (${q(ladder.slug)}, ${q(ladder.name)}, null, ${ladder.startLevel})
+      `insert into ladders (user_id, slug, name, description, start_level)
+       values (${userId}, ${q(ladder.slug)}, ${q(ladder.name)}, null, ${ladder.startLevel})
        returning id`,
     );
     for (const level of ladder.levels) {
@@ -169,10 +207,10 @@ async function main() {
   for (const target of seed.targets) {
     for (const [date, value] of Object.entries(target.byDate)) {
       await db.execute(
-        `insert into targets (slug, movement, unit, date, value, start_label)
-         values (${q(target.slug)}, ${q(target.movement)}, ${q(target.unit)}, ${q(date)},
+        `insert into targets (user_id, slug, movement, unit, date, value, start_label)
+         values (${userId}, ${q(target.slug)}, ${q(target.movement)}, ${q(target.unit)}, ${q(date)},
                  ${q(value)}, ${q(target.startLabel)})
-         on conflict (slug, date) do update set
+         on conflict (user_id, slug, date) do update set
            value = excluded.value, movement = excluded.movement,
            unit = excluded.unit, start_label = excluded.start_label`,
       );
@@ -182,9 +220,9 @@ async function main() {
 
   for (const [index, metric] of seed.testMetrics.entries()) {
     await db.execute(
-      `insert into test_metrics (slug, label, unit, order_index)
-       values (${q(metric.slug)}, ${q(metric.label)}, ${q(metric.unit)}, ${index})
-       on conflict (slug) do update set
+      `insert into test_metrics (user_id, slug, label, unit, order_index)
+       values (${userId}, ${q(metric.slug)}, ${q(metric.label)}, ${q(metric.unit)}, ${index})
+       on conflict (user_id, slug) do update set
          label = excluded.label, unit = excluded.unit, order_index = excluded.order_index`,
     );
   }
@@ -204,9 +242,9 @@ async function main() {
 
   for (const date of seed.checkpointDates) {
     await db.execute(
-      `insert into checkpoints (date, label)
-       values (${q(date)}, ${q("Contrôle -- mensurations, photos, meilleures séries")})
-       on conflict (date) do nothing`,
+      `insert into checkpoints (user_id, date, label)
+       values (${userId}, ${q(date)}, ${q("Contrôle -- mensurations, photos, meilleures séries")})
+       on conflict (user_id, date) do nothing`,
     );
   }
 
@@ -216,8 +254,8 @@ async function main() {
   async function insertProgram(code: string, name: string, weeks: ProgramWeek[], days: ProgramDay[]) {
     const dates = days.map((d) => d.date).sort();
     const [{ id: programId }] = await db.query<{ id: number }>(
-      `insert into programs (code, name, start_date, end_date)
-       values (${q(code)}, ${q(name)}, ${q(dates[0])}, ${q(dates[dates.length - 1])})
+      `insert into programs (user_id, code, name, start_date, end_date)
+       values (${userId}, ${q(code)}, ${q(name)}, ${q(dates[0])}, ${q(dates[dates.length - 1])})
        returning id`,
     );
 
@@ -280,10 +318,8 @@ async function main() {
   await insertProgram("ppl", "Musculation PPL -- Soir", seed.ppl.weeks, seed.ppl.days);
   await insertProgram("calisthenie", "Calisthénie", seed.calisthenie.weeks, seed.calisthenie.days);
 
-  await db.execute("insert into settings (id) values (1) on conflict (id) do nothing");
-
   await db.close();
-  console.log("\n✓ Référentiel importé.");
+  console.log(`\n✓ Programme importé pour ${account.display_name}.`);
 }
 
 main().catch((error) => {

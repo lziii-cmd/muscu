@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
+import { currentUserId } from "@/lib/auth/current-user";
 import type { Slot } from "@/lib/utils";
 
 /*
@@ -9,6 +10,11 @@ import type { Slot } from "@/lib/utils";
  * Les pages analytiques lisent directement ici. L'écran de séance, lui, passe
  * par une route API : il doit rester consultable hors-ligne, donc le client le
  * met en cache dans IndexedDB.
+ *
+ * PORTÉE — chaque lecture est filtrée sur le compte connecté, lu par la requête
+ * elle-même et non reçu en paramètre. Deux personnes utilisent l'application :
+ * un appelant qui oublierait de transmettre l'identifiant exposerait le journal
+ * de l'autre.
  */
 
 export interface PrescribedExercise {
@@ -94,6 +100,7 @@ const toNumber = (value: unknown): number | null => {
 /** Toutes les séances prescrites et réalisées d'une journée, tous créneaux. */
 export async function getDay(date: string): Promise<DaySession[]> {
   const db = getDb();
+  const userId = await currentUserId();
 
   const prescribedSessions = await db
     .select({
@@ -106,7 +113,8 @@ export async function getDay(date: string): Promise<DaySession[]> {
       isTestDay: schema.programSessions.isTestDay,
     })
     .from(schema.programSessions)
-    .where(eq(schema.programSessions.date, date))
+    .innerJoin(schema.programs, eq(schema.programs.id, schema.programSessions.programId))
+    .where(and(eq(schema.programSessions.date, date), eq(schema.programs.userId, userId)))
     .orderBy(asc(schema.programSessions.slot));
 
   const sessionIds = prescribedSessions.map((s) => s.id);
@@ -147,7 +155,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
   const loggedSessions = await db
     .select()
     .from(schema.sessions)
-    .where(eq(schema.sessions.date, date));
+    .where(and(eq(schema.sessions.date, date), eq(schema.sessions.userId, userId)));
 
   const loggedIds = loggedSessions.map((s) => s.id);
   const loggedExercises = loggedIds.length
@@ -295,6 +303,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
 /** Semaine de programme contenant une date, pour afficher bloc et consigne. */
 export async function getWeekFor(date: string) {
   const db = getDb();
+  const userId = await currentUserId();
   const rows = await db
     .select({
       weekNumber: schema.programWeeks.weekNumber,
@@ -307,7 +316,11 @@ export async function getWeekFor(date: string) {
     .from(schema.programWeeks)
     .innerJoin(schema.programs, eq(schema.programs.id, schema.programWeeks.programId))
     .where(
-      and(lte(schema.programWeeks.startDate, date), gte(schema.programWeeks.endDate, date)),
+      and(
+        lte(schema.programWeeks.startDate, date),
+        gte(schema.programWeeks.endDate, date),
+        eq(schema.programs.userId, userId),
+      ),
     );
 
   return rows;
@@ -316,6 +329,7 @@ export async function getWeekFor(date: string) {
 /** Journal des séances sur une période, pour le calendrier et l'assiduité. */
 export async function getSessionRecords(from: string, to: string) {
   const db = getDb();
+  const userId = await currentUserId();
   return db
     .select({
       date: schema.sessions.date,
@@ -328,13 +342,20 @@ export async function getSessionRecords(from: string, to: string) {
       rpe: schema.sessions.rpe,
     })
     .from(schema.sessions)
-    .where(and(gte(schema.sessions.date, from), lte(schema.sessions.date, to)))
+    .where(
+      and(
+        gte(schema.sessions.date, from),
+        lte(schema.sessions.date, to),
+        eq(schema.sessions.userId, userId),
+      ),
+    )
     .orderBy(asc(schema.sessions.date));
 }
 
 /** Toutes les séances prescrites d'une période, pour le calendrier. */
 export async function getPrescribedRange(from: string, to: string) {
   const db = getDb();
+  const userId = await currentUserId();
   return db
     .select({
       date: schema.programSessions.date,
@@ -345,13 +366,21 @@ export async function getPrescribedRange(from: string, to: string) {
       isTestDay: schema.programSessions.isTestDay,
     })
     .from(schema.programSessions)
-    .where(and(gte(schema.programSessions.date, from), lte(schema.programSessions.date, to)))
+    .innerJoin(schema.programs, eq(schema.programs.id, schema.programSessions.programId))
+    .where(
+      and(
+        gte(schema.programSessions.date, from),
+        lte(schema.programSessions.date, to),
+        eq(schema.programs.userId, userId),
+      ),
+    )
     .orderBy(asc(schema.programSessions.date));
 }
 
 /** Historique d'un exercice, agrégé par séance : base des courbes et des records. */
 export async function getExerciseHistory(exerciseId: number) {
   const db = getDb();
+  const userId = await currentUserId();
   const rows = await db
     .select({
       date: schema.sessions.date,
@@ -364,7 +393,13 @@ export async function getExerciseHistory(exerciseId: number) {
     })
     .from(schema.sessionExercises)
     .innerJoin(schema.sessions, eq(schema.sessions.id, schema.sessionExercises.sessionId))
-    .where(and(eq(schema.sessionExercises.exerciseId, exerciseId), eq(schema.sessionExercises.done, true)))
+    .where(
+      and(
+        eq(schema.sessionExercises.exerciseId, exerciseId),
+        eq(schema.sessionExercises.done, true),
+        eq(schema.sessions.userId, userId),
+      ),
+    )
     .orderBy(asc(schema.sessions.date));
 
   return rows.map((row) => ({
@@ -380,6 +415,7 @@ export async function getExerciseHistory(exerciseId: number) {
 /** Exercices déjà travaillés, avec leur dernière charge : base de la progression. */
 export async function getTrackedExercises() {
   const db = getDb();
+  const userId = await currentUserId();
   return db
     .select({
       exerciseId: schema.exercises.id,
@@ -393,30 +429,51 @@ export async function getTrackedExercises() {
     .from(schema.sessionExercises)
     .innerJoin(schema.exercises, eq(schema.exercises.id, schema.sessionExercises.exerciseId))
     .innerJoin(schema.sessions, eq(schema.sessions.id, schema.sessionExercises.sessionId))
-    .where(and(eq(schema.sessionExercises.done, true), eq(schema.sessions.location, "salle")))
+    .where(
+      and(
+        eq(schema.sessionExercises.done, true),
+        eq(schema.sessions.location, "salle"),
+        eq(schema.sessions.userId, userId),
+      ),
+    )
     .groupBy(schema.exercises.id, schema.exercises.name, schema.exercises.muscleGroup, schema.exercises.unit)
     .orderBy(desc(sql`max(${schema.sessions.date})`));
 }
 
 export async function getBodyweightEntries() {
   const db = getDb();
+  const userId = await currentUserId();
   const rows = await db
     .select()
     .from(schema.bodyweightEntries)
+    .where(eq(schema.bodyweightEntries.userId, userId))
     .orderBy(asc(schema.bodyweightEntries.date));
   return rows.map((row) => ({ date: row.date, weightKg: Number(row.weightKg) }));
 }
 
 export async function getMeasurements() {
   const db = getDb();
-  const rows = await db.select().from(schema.measurements).orderBy(asc(schema.measurements.date));
+  const userId = await currentUserId();
+  const rows = await db
+    .select()
+    .from(schema.measurements)
+    .where(eq(schema.measurements.userId, userId))
+    .orderBy(asc(schema.measurements.date));
   return rows.map((row) => ({ date: row.date, kind: row.kind, valueCm: Number(row.valueCm) }));
 }
 
 export async function getSleepEntries(from?: string) {
   const db = getDb();
-  const query = db.select().from(schema.sleepLogs).orderBy(asc(schema.sleepLogs.date));
-  const rows = from ? await query.where(gte(schema.sleepLogs.date, from)) : await query;
+  const userId = await currentUserId();
+  const rows = await db
+    .select()
+    .from(schema.sleepLogs)
+    .where(
+      from
+        ? and(eq(schema.sleepLogs.userId, userId), gte(schema.sleepLogs.date, from))
+        : eq(schema.sleepLogs.userId, userId),
+    )
+    .orderBy(asc(schema.sleepLogs.date));
   return rows.map((row) => ({
     date: row.date,
     durationMinutes: row.durationMinutes,
@@ -429,8 +486,16 @@ export async function getSleepEntries(from?: string) {
 
 export async function getPainEntries(from?: string) {
   const db = getDb();
-  const query = db.select().from(schema.painLogs).orderBy(asc(schema.painLogs.date));
-  const rows = from ? await query.where(gte(schema.painLogs.date, from)) : await query;
+  const userId = await currentUserId();
+  const rows = await db
+    .select()
+    .from(schema.painLogs)
+    .where(
+      from
+        ? and(eq(schema.painLogs.userId, userId), gte(schema.painLogs.date, from))
+        : eq(schema.painLogs.userId, userId),
+    )
+    .orderBy(asc(schema.painLogs.date));
   return rows.map((row) => ({
     date: row.date,
     area: row.area,
@@ -450,9 +515,13 @@ export async function getFoods() {
 
 export async function getDayNutrition(date: string) {
   const db = getDb();
+  const userId = await currentUserId();
 
   const [meals, items, oil, water, rice] = await Promise.all([
-    db.select().from(schema.mealLogs).where(eq(schema.mealLogs.date, date)),
+    db
+      .select()
+      .from(schema.mealLogs)
+      .where(and(eq(schema.mealLogs.date, date), eq(schema.mealLogs.userId, userId))),
     db
       .select({
         mealLogId: schema.mealItems.mealLogId,
@@ -465,10 +534,19 @@ export async function getDayNutrition(date: string) {
       .from(schema.mealItems)
       .innerJoin(schema.foods, eq(schema.foods.id, schema.mealItems.foodId))
       .innerJoin(schema.mealLogs, eq(schema.mealLogs.id, schema.mealItems.mealLogId))
-      .where(eq(schema.mealLogs.date, date)),
-    db.select().from(schema.oilLogs).where(eq(schema.oilLogs.date, date)),
-    db.select().from(schema.waterLogs).where(eq(schema.waterLogs.date, date)),
-    db.select().from(schema.riceLogs).where(eq(schema.riceLogs.date, date)),
+      .where(and(eq(schema.mealLogs.date, date), eq(schema.mealLogs.userId, userId))),
+    db
+      .select()
+      .from(schema.oilLogs)
+      .where(and(eq(schema.oilLogs.date, date), eq(schema.oilLogs.userId, userId))),
+    db
+      .select()
+      .from(schema.waterLogs)
+      .where(and(eq(schema.waterLogs.date, date), eq(schema.waterLogs.userId, userId))),
+    db
+      .select()
+      .from(schema.riceLogs)
+      .where(and(eq(schema.riceLogs.date, date), eq(schema.riceLogs.userId, userId))),
   ]);
 
   const proteinG = items.reduce(
@@ -500,8 +578,13 @@ export async function getDayNutrition(date: string) {
 
 export async function getLadders() {
   const db = getDb();
+  const userId = await currentUserId();
   const [ladders, levels, progress] = await Promise.all([
-    db.select().from(schema.ladders).orderBy(asc(schema.ladders.id)),
+    db
+      .select()
+      .from(schema.ladders)
+      .where(eq(schema.ladders.userId, userId))
+      .orderBy(asc(schema.ladders.id)),
     db.select().from(schema.ladderLevels).orderBy(asc(schema.ladderLevels.level)),
     db.select().from(schema.ladderProgress),
   ]);
@@ -516,7 +599,12 @@ export async function getLadders() {
 
 export async function getStrengthTests() {
   const db = getDb();
-  const rows = await db.select().from(schema.strengthTests).orderBy(asc(schema.strengthTests.date));
+  const userId = await currentUserId();
+  const rows = await db
+    .select()
+    .from(schema.strengthTests)
+    .where(eq(schema.strengthTests.userId, userId))
+    .orderBy(asc(schema.strengthTests.date));
   return rows.map((row) => ({
     date: row.date,
     metric: row.metric,
@@ -527,7 +615,12 @@ export async function getStrengthTests() {
 
 export async function getCheckpoints() {
   const db = getDb();
-  return db.select().from(schema.checkpoints).orderBy(asc(schema.checkpoints.date));
+  const userId = await currentUserId();
+  return db
+    .select()
+    .from(schema.checkpoints)
+    .where(eq(schema.checkpoints.userId, userId))
+    .orderBy(asc(schema.checkpoints.date));
 }
 
 /**
@@ -558,10 +651,16 @@ export async function getAllExercises() {
 
 export async function getPullupMax(fallback = 3): Promise<number> {
   const db = getDb();
+  const userId = await currentUserId();
   const rows = await db
     .select({ value: schema.strengthTests.value, date: schema.strengthTests.date })
     .from(schema.strengthTests)
-    .where(eq(schema.strengthTests.metric, "tractions-strictes"))
+    .where(
+      and(
+        eq(schema.strengthTests.metric, "tractions-strictes"),
+        eq(schema.strengthTests.userId, userId),
+      ),
+    )
     .orderBy(desc(schema.strengthTests.date))
     .limit(1);
 
@@ -571,7 +670,12 @@ export async function getPullupMax(fallback = 3): Promise<number> {
 
 export async function getTargets() {
   const db = getDb();
-  const rows = await db.select().from(schema.targets).orderBy(asc(schema.targets.date));
+  const userId = await currentUserId();
+  const rows = await db
+    .select()
+    .from(schema.targets)
+    .where(eq(schema.targets.userId, userId))
+    .orderBy(asc(schema.targets.date));
   return rows.map((row) => ({
     slug: row.slug,
     movement: row.movement,
@@ -584,7 +688,12 @@ export async function getTargets() {
 
 export async function getTestMetrics() {
   const db = getDb();
-  return db.select().from(schema.testMetrics).orderBy(asc(schema.testMetrics.orderIndex));
+  const userId = await currentUserId();
+  return db
+    .select()
+    .from(schema.testMetrics)
+    .where(eq(schema.testMetrics.userId, userId))
+    .orderBy(asc(schema.testMetrics.orderIndex));
 }
 
 /**
@@ -596,6 +705,7 @@ export async function getTestMetrics() {
  */
 export async function getProgramOverview() {
   const db = getDb();
+  const userId = await currentUserId();
 
   const [weeks, sessions, logged] = await Promise.all([
     db
@@ -609,6 +719,7 @@ export async function getProgramOverview() {
       })
       .from(schema.programWeeks)
       .innerJoin(schema.programs, eq(schema.programs.id, schema.programWeeks.programId))
+      .where(eq(schema.programs.userId, userId))
       .orderBy(asc(schema.programWeeks.weekNumber)),
 
     db
@@ -628,6 +739,7 @@ export async function getProgramOverview() {
         schema.programExercises,
         eq(schema.programExercises.programSessionId, schema.programSessions.id),
       )
+      .where(eq(schema.programs.userId, userId))
       .groupBy(
         schema.programSessions.date,
         schema.programSessions.slot,
@@ -646,14 +758,10 @@ export async function getProgramOverview() {
         status: schema.sessions.status,
         location: schema.sessions.location,
       })
-      .from(schema.sessions),
+      .from(schema.sessions)
+      .where(eq(schema.sessions.userId, userId)),
   ]);
 
   return { weeks, sessions, logged };
 }
 
-export async function getSettings() {
-  const db = getDb();
-  const rows = await db.select().from(schema.settings).where(eq(schema.settings.id, 1));
-  return rows[0] ?? null;
-}

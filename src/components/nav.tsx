@@ -17,6 +17,7 @@ import {
   Target,
   BookOpen,
   CloudOff,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { flushOutbox, pendingCount } from "@/lib/local/db";
@@ -44,6 +45,7 @@ const SECONDARY = [
   { href: "/tests", label: "Tests & contrôles", icon: Dumbbell },
   { href: "/sommeil", label: "Sommeil", icon: BedDouble },
   { href: "/exercices", label: "Exercices", icon: BookOpen },
+  { href: "/compte", label: "Compte", icon: UserRound },
 ];
 
 function useIsActive() {

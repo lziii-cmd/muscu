@@ -3,16 +3,15 @@
 Dernière mise à jour : 2026-08-26
 
 ## CONTEXTE ACTUEL
-- Où on en est : **application reconstruite sur `PROGRAMME-COMPLET.md`** (déposé le 26/08 à 14:59), qui se déclare source de vérité et remplace les PDF. 120 tests, test de fumée et build au vert. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 29 tables, référentiel des 17 semaines importé. Typecheck, lint, 116 tests unitaires et test de fumée passent tous. Build en 12,6 s.
-- Dernière fonctionnalité travaillée : intégration des **alternatives maison** (séance déplaçable plutôt que ratée) et reprise complète du seed sur les nouveaux documents. Avant : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
-- **Prochaine fonctionnalité demandée : le multi-utilisateur** (deux comptes, chacun son programme). Le second programme n'est pas encore fourni. C'est structurant : `users`, `user_id` sur tout le journal et sur `programs`, portée des requêtes.
-- Prochaine étape technique : **push GitHub puis déploiement Vercel**. La base Neon est créée (projet « Muscu », région AWS Europe Central 1 Francfort, Postgres 18) ; `DATABASE_URL` reste à renseigner côté Vercel et en local.
+- Où on en est : **application multi-comptes**. Le passage d'un compte unique à plusieurs comptes est terminé côté code : table `users`, `user_id` sur 17 tables, 14 index d'unicité re-cadrés sur le compte, toutes les requêtes filtrées côté serveur, écrans *Compte* et *Comptes* (administration). Typecheck, lint, 120 tests et test de fumée au vert ; build de production réussi.
+- Dernière fonctionnalité travaillée : **comptes, rôles et cloisonnement**. Trois comptes prévus : `abdou`, `nourah` (utilisateurs), `admin` (gestion des comptes uniquement, aucun accès aux données d'entraînement des autres).
+- Prochaine fonctionnalité prévue : **importer le programme de Nourah** dès qu'il est fourni (`npm run db:seed -- --user nourah --seed …`). En attendant, son compte n'a pas de programme et la page *Programme* affiche un message explicite plutôt qu'une page vide.
 - Problèmes ouverts :
-  - Aucun identifiant Neon fourni à ce jour : tout a été vérifié sur PGlite en local.
-  - Les 5 PDF à la racine sont **superflus** depuis l'arrivée du Markdown : à supprimer sur accord de l'utilisateur.
-  - Les fiches d'exécution des exercices (position / exécution / erreur à éviter) ne sont pas importées : leur tableau PDF est trop désaligné pour une extraction fiable.
-  - Les photos de progression n'ont pas de stockage branché (Vercel Blob à confirmer, seul poste potentiellement payant).
-  - Aucune vérification visuelle n'a pu être faite : le panneau navigateur n'est pas affichable dans cet environnement. La vérification est structurelle (HTML rendu + contenu attendu), pas esthétique.
+  - **La base Neon porte encore l'ancien schéma** (table `settings`, pas de `users`) : l'application déployée ne peut pas s'y connecter tant que le schéma n'est pas repris. La remise à zéro a été bloquée par le garde-fou de l'environnement ; les commandes sont à lancer par l'utilisateur (voir la note de session du 26/08 — quatrième partie).
+  - Inventaire fait avant toute opération destructive : la base distante ne contenait **aucune donnée saisie** — une ligne de sommeil entièrement nulle et neuf lignes d'échelles identiques aux niveaux de départ du seed.
+  - Les mots de passe initiaux ont transité par la conversation : **à changer au premier passage** depuis l'écran *Compte*. Un bandeau le rappelle tant que c'est le cas.
+  - Les fiches d'exécution des exercices ne sont pas importées.
+  - Les photos de progression n'ont pas de stockage branché.
 
 ## DÉCISIONS TECHNIQUES
 | Date | Décision | Pourquoi | Alternative écartée |
@@ -28,7 +27,14 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Refus d'apparier si les comptes diffèrent | Un décalage silencieux ferait charger la mauvaise barre pendant 4 mois | Deviner |
 | 2026-08-26 | Écriture via file d'attente IndexedDB (outbox) | Séance à 23h, réseau instable ; le serveur reste source de vérité car iOS purge le stockage des PWA | Écriture directe |
 | 2026-08-26 | Idempotence par identifiant de mutation client | Rejouer après coupure ne doit pas créer de doublon | Déduplication côté client seul |
-| 2026-08-26 | Auth mono-utilisateur, scrypt de `node:crypto` | Un seul compte ; évite une dépendance native à compiler | NextAuth, argon2 natif |
+| 2026-08-26 | Auth par scrypt de `node:crypto` | Évite une dépendance native à compiler ; mémoire-dur, résistant au GPU | NextAuth, argon2 natif |
+| 2026-08-26 | **Portée décidée par le serveur** (`requireUser()`), jamais passée en paramètre | Un appelant distrait ne peut pas exposer le journal du voisin : l'oubli de filtre devient impossible plutôt qu'improbable | `userId` passé depuis les pages |
+| 2026-08-26 | `user_id` dans les index d'unicité, pas seulement en colonne | Sans lui, la deuxième personne ne pourrait pas enregistrer une séance le jour où l'autre en a une | Index globaux |
+| 2026-08-26 | Le rôle admin ne gère que les comptes | Gérer les comptes n'est pas lire le journal de quelqu'un ; séparer les deux évite qu'un accès administratif devienne un accès aux données | Admin voit tout |
+| 2026-08-26 | Un administrateur ne peut ni se retirer son rôle ni se supprimer | Ce sont les deux gestes qui fermeraient la porte de l'extérieur | Confiance dans l'interface |
+| 2026-08-26 | Le seed vise **un compte** et ne touche jamais au journal | Deux programmes différents doivent coexister ; un re-seed ne doit rien effacer de ce qui a été vécu | Seed global |
+| 2026-08-26 | Catalogue d'exercices et aliments partagés entre comptes | Référentiels neutres : les dupliquer n'apporterait rien et compliquerait la recherche | Table par compte |
+| 2026-08-26 | Pas d'inscription depuis l'application | Adresse publique : une inscription libre donnerait un accès à n'importe qui | Écran d'inscription |
 | 2026-08-26 | PGlite en repli local quand `DATABASE_URL` est absente | Permet de développer et de tester sans identifiants Neon ni Docker | Exiger Neon dès le développement |
 | 2026-08-26 | Garde « pas de base locale » sur `VERCEL`, pas sur `NODE_ENV` | Un build de production tourne aussi en local (tests) ; le vrai risque est un déploiement sans base | Garde sur NODE_ENV |
 | 2026-08-26 | **Source = `PROGRAMME-COMPLET.md`**, plus les PDF | Dans un tableau Markdown les cellules sont délimitées : les trois classes de bugs de l'extraction PDF (colonnes qui dérivent, fourchettes écrasées, consignes tronquées) n'ont plus de place où exister | Continuer à parser des PDF |
@@ -54,10 +60,14 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Schéma 29 tables + migration | fait | `drizzle/0000_init.sql` |
 | 2026-08-26 | Domaine métier + 116 tests | fait | 6 modules purs, sans base ni React |
 | 2026-08-26 | Couche hors-ligne (Dexie + outbox) | fait | Synchronisation idempotente via `/api/sync` |
-| 2026-08-26 | Authentification mono-utilisateur | fait | iron-session + scrypt, groupe de routes `(app)` protégé |
+| 2026-08-26 | Authentification | fait | iron-session + scrypt, groupe de routes `(app)` protégé |
 | 2026-08-26 | 11 pages + 2 pages de détail | fait | Aujourd'hui, séance/[date], journal, progression, calisthénie, corps, tests, diète, sommeil, bilan, exercices |
 | 2026-08-26 | PWA (manifeste, service worker, icônes) | fait | Icônes générées par programme, encodeur PNG maison |
-| 2026-08-26 | Test de fumée autonome | fait | 11 pages + 4 comportements d'API |
+| 2026-08-26 | Test de fumée autonome | fait | 13 pages + 7 comportements d'API, dont le refus de l'administration à un compte ordinaire |
+| 2026-08-26 | Planning des 17 semaines, saisie rétroactive, séances libres | fait | Page *Programme*, panneau « à rattraper » |
+| 2026-08-26 | Alternative maison, remplacement d'un exercice, exercices à unité libre | fait | Bouton *maison* toujours offert en salle ; corde à sauter comptée en sauts |
+| 2026-08-26 | **Multi-comptes** | fait | `users`, `user_id` sur 17 tables, 14 index re-cadrés, requêtes et synchronisation filtrées |
+| 2026-08-26 | Écran *Compte* + administration des comptes | fait | Changement de son mot de passe, création/réinitialisation/suppression côté admin, bandeau « mot de passe d'origine » |
 
 ## PROBLÈMES RENCONTRÉS & SOLUTIONS
 | Date | Problème | Cause | Solution appliquée |
@@ -89,7 +99,10 @@ Dernière mise à jour : 2026-08-26
 
 ## POINTS DE VIGILANCE
 - **Le programme est daté et court.** 24 août → 20 décembre 2026. Aucune date en dur dans le code : tout vient de `program_weeks` ou de `src/lib/targets.ts`.
-- **PGlite est mono-processus.** Arrêter le serveur avant `db:migrate`, `db:seed` ou `db:reset-password`, sinon les écritures ne sont pas vues.
+- **PGlite est mono-processus.** Arrêter le serveur avant `db:migrate`, `db:seed` ou `npm run users`, sinon les écritures ne sont pas vues. Un `taskkill` brutal sur un serveur qui tient la base la laisse corrompue : supprimer le dossier et la reconstruire.
+- **Toute nouvelle requête doit être filtrée par compte.** Le point d'entrée est `currentUserId()` ; une requête qui l'oublie renvoie les données de tout le monde sans lever d'erreur. Même chose pour tout nouvel index d'unicité, qui doit inclure `user_id`.
+- **Le seed vise un compte.** `npm run db:seed -- --user X` : sans `--user`, il refuse de tourner. Il réécrit le programme de X et ne touche à rien d'autre.
+- **Une séance déjà enregistrée référence sa séance prescrite.** Re-semer le programme d'un compte qui a déjà journalisé des séances échouera sur la clé étrangère — c'est voulu, mieux vaut un refus qu'une perte.
 - **Ne jamais afficher une courbe de poids seule.** En recomposition, le poids ment : la lecture croise toujours poids lissé + tour de taille + charges.
 - **La saisie doit tenir en une main, à 23h.** Cibles tactiles ≥ 44 px, clavier numérique, une charge par exercice et non par série.
 - **Le seed n'est pas une vérité absolue.** `data/seed/REVUE.md` existe pour être relu ; les valeurs prescrites restent éditables dans l'application.
@@ -106,6 +119,19 @@ Dernière mise à jour : 2026-08-26
 | Basse | Pas de tests de parcours (Playwright) | Le test de fumée couvre le rendu et l'API, pas l'interaction | M |
 
 ## NOTES DE SESSION
+
+### 2026-08-26 — quatrième partie
+L'utilisateur a demandé deux comptes nommés plus un compte d'administration. Ce n'est pas un ajout d'écran : c'est une propriété qui doit tenir sur **toute** la surface de l'application. Trois choix ont porté le travail.
+
+D'abord, la portée est **décidée par le serveur**. Chaque requête commence par `currentUserId()` et filtre dessus ; aucune page ne passe d'identifiant. Un appelant distrait ne peut donc pas exposer le journal du voisin — l'erreur devient impossible plutôt qu'improbable.
+
+Ensuite, `user_id` est entré dans les **index d'unicité**, pas seulement dans les colonnes. Sans cela, la deuxième personne n'aurait pas pu enregistrer une séance le jour où l'autre en avait une : le conflit se serait produit à la première utilisation réelle, pas au test.
+
+Enfin, le rôle admin ne gère que les comptes. Gérer un compte n'est pas lire le journal de quelqu'un. Un administrateur peut imposer un mot de passe — jamais en lire un, l'empreinte scrypt n'étant pas réversible — mais ne voit aucune donnée d'entraînement. Il ne peut pas non plus se retirer son propre rôle ni se supprimer : ce sont les deux gestes qui fermeraient la porte de l'extérieur.
+
+Le cloisonnement a été vérifié bout en bout, pas seulement lu : deux comptes ont enregistré un poids différent le même jour, chacun ne voit que le sien. Le test de fumée contrôle désormais aussi qu'un compte ordinaire est refusé sur l'administration, par la page comme par l'API.
+
+Deux limites à la fin de cette partie. La remise à zéro du schéma Neon a été **bloquée par le garde-fou de l'environnement** : elle est à lancer par l'utilisateur. Et l'inventaire préalable de la base distante — fait avant, pas après — a montré qu'elle ne contenait aucune donnée saisie : une ligne de sommeil entièrement nulle, neuf lignes d'échelles identiques aux niveaux de départ du seed.
 
 ### 2026-08-26 — troisième partie
 L'utilisateur a relayé une relecture ligne par ligne de mon seed contre ses sources. Les charges de musculation étaient toutes bonnes (116 occurrences vérifiées), mais la partie calisthénie avait quatre défauts, dont deux sérieux. Je les ai vérifiés un par un contre le document plutôt que de les appliquer de confiance : **tous fondés**.

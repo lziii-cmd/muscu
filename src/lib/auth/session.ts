@@ -5,10 +5,11 @@ import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
 /*
- * Authentification mono-utilisateur.
+ * Authentification.
  *
- * Un seul compte, protégé par un mot de passe. Pas de fournisseur d'identité,
- * pas d'inscription : ce serait de la complexité sans usage.
+ * Plusieurs comptes, chacun avec son programme et son journal. Le rôle
+ * `admin` ne donne pas accès aux données d'entraînement des autres : il permet
+ * de gérer les comptes, rien de plus.
  *
  * Le hachage utilise scrypt, fourni par Node : mémoire-dur, résistant aux
  * attaques par GPU, et sans dépendance native à compiler.
@@ -27,7 +28,9 @@ const SCRYPT_KEYLEN = 64;
 const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1 };
 
 export interface SessionData {
-  authenticated?: boolean;
+  userId?: number;
+  username?: string;
+  role?: "user" | "admin";
   since?: string;
 }
 
@@ -60,7 +63,7 @@ export async function getSession(): Promise<IronSession<SessionData>> {
 
 export async function isAuthenticated(): Promise<boolean> {
   const session = await getSession();
-  return session.authenticated === true;
+  return typeof session.userId === "number";
 }
 
 export async function hashPassword(password: string): Promise<string> {

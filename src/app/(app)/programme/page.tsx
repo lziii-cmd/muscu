@@ -17,6 +17,27 @@ export default async function ProgrammePage() {
   const { weeks, sessions, logged } = await getProgramOverview();
   const todayIso = today();
 
+  /*
+   * Un compte fraîchement créé n'a pas encore de programme. Sans ce message, la
+   * page afficherait des compteurs à zéro et une liste vide, ce qui ressemble à
+   * une panne alors que le reste de l'application fonctionne.
+   */
+  if (sessions.length === 0) {
+    return (
+      <>
+        <PageHeader title="Programme" subtitle="Aucun programme importé pour ce compte." />
+        <Card>
+          <CardTitle>Rien à afficher pour l&apos;instant</CardTitle>
+          <p className="mt-2 text-sm text-muted">
+            Le programme de ce compte n&apos;a pas encore été importé. En attendant, tout le reste
+            est utilisable : diète, poids et mensurations, sommeil, et les entraînements libres
+            depuis l&apos;écran du jour.
+          </p>
+        </Card>
+      </>
+    );
+  }
+
   // Une clé par jour et par créneau, pour retrouver l'état de saisie.
   const loggedByKey = new Map(logged.map((row) => [`${row.date}:${row.slot}`, row]));
 

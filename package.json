@@ -18,7 +18,7 @@
     "seed:build": "tsx scripts/build-seed.ts",
     "verify": "npm run typecheck && npm run lint && npm run test",
     "smoke": "tsx scripts/smoke.ts",
-    "db:reset-password": "tsx scripts/reset-password.ts"
+    "users": "tsx scripts/users.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
