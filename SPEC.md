@@ -1,7 +1,7 @@
 # SPEC.md — Plateforme de suivi d'entraînement
 
 Dernière mise à jour : 2026-08-26
-Statut : **implémenté et vérifié en local**, sur les documents révisés du 26/08. Reste à pousser sur GitHub, brancher Neon et déployer.
+Statut : **implémenté et vérifié en local**, sur `PROGRAMME-COMPLET.md` (source de vérité). Reste à pousser sur GitHub, brancher Neon et déployer.
 
 ---
 
@@ -12,9 +12,9 @@ Une PWA personnelle pour piloter un programme de 17 semaines
 
 | Volet | Fréquence | Créneau | Source |
 |-------|-----------|---------|--------|
-| Musculation PPL | 6 séances/semaine, 60 min chrono | 23h | `1-musculation-ppl-soir.pdf` |
-| Calisthénie | 6 jours/semaine, 20 min matin + 10 min soir | avant 7h / 17h–20h | `2-calisthenie.pdf` |
-| Diète recomposition | quotidien | — | `3-diete-senegal.pdf` |
+| Musculation PPL | 6 séances/semaine, 60 min chrono | 23h | `PROGRAMME-COMPLET.md`, partie 1 |
+| Calisthénie | 6 jours/semaine, 20 min matin + 10 min soir | avant 7h / 17h–20h | `PROGRAMME-COMPLET.md`, partie 2 |
+| Diète recomposition | quotidien | — | `PROGRAMME-COMPLET.md`, partie 3 |
 
 Soit **12 séances par semaine**.
 
@@ -40,7 +40,7 @@ et il est couvert.
 
 ## 3. Modèle de données
 
-29 tables. Migration : `drizzle/0000_init.sql`.
+30 tables. Migration : `drizzle/0000_init.sql`.
 
 ### Référentiel (semé, lu seul)
 `programs`, `program_weeks`, `program_sessions`, `program_exercises` (dont `home_alternative`),
@@ -48,6 +48,10 @@ et il est couvert.
 
 Les échelles, objectifs et métriques de test sont **extraits du document**, pas transcrits : ils ont
 changé entre deux révisions sans que rien ne le signale.
+
+`program_exercises` distingue `hold_seconds_low` de `hold_seconds_high` (une fourchette de tenue
+n'est pas une tenue unique) et porte un `max_offset` entier — le décalage vaut 1 les jours de force
+et 2 le jeudi, journée de volume.
 
 Une séance prescrite = `program_sessions` avec un créneau (`salle` / `matin` / `soir`) :
 le programme de salle produit une séance par jour, la calisthénie deux.
@@ -111,7 +115,7 @@ Motif obligatoire dans une liste fermée de 10 entrées. Distinction **manquée*
 motif dominant, jour de la semaine le plus sauté.
 
 ### 4.6 Calisthénie — stable
-Les 8 échelles avec leurs niveaux et critères, extraites du document. Critère de passage **« deux séances propres
+Les 9 échelles avec leurs niveaux, critères et **niveau de départ**, extraites du document. Critère de passage **« deux séances propres
 consécutives »** suivi par un compteur visible, et passage proposé par l'app. Règle du **(max − 1)**
 appliquée au format du jour. Retest du max limité à un lundi sur deux. Objectifs jalonnés sur 8 mouvements (tractions, pompes, dips, dead hang, pike push-up, ATR, front lever, hollow body).
 
@@ -141,7 +145,7 @@ Un écran qui tranche : **ça progresse / ça stagne / ça régresse, et où**. 
 précédente, tonnage, poids, sommeil, ce qui progresse, ce qui stagne, points de vigilance.
 
 ### 4.12 Bibliothèque d'exercices — stable *(fiches d'exécution à compléter)*
-Les 114 exercices des deux programmes, groupés, avec l'historique personnel et une fiche par
+Les 111 exercices des deux programmes, groupés, avec l'historique personnel et une fiche par
 exercice (courbe, records, conseil de progression, historique détaillé).
 Les consignes position/exécution/erreur ne sont pas encore importées.
 
@@ -222,7 +226,7 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 |---|---|---|
 | Architecture | 8/10 | Domaine métier isolé et testé, hors-ligne pensé dès le départ. Le couplage entre le seed et le format des PDF reste un point faible. |
 | Qualité code | 8/10 | Typecheck et lint stricts, conventions homogènes, commentaires qui expliquent le pourquoi. Quelques pages longues. |
-| Tests | 7/10 | 116 tests unitaires sur toutes les règles métier, test de fumée sur 11 pages et l'API. Aucun test de parcours (interaction, hors-ligne réel). |
+| Tests | 8/10 | 120 tests unitaires sur toutes les règles métier, test de fumée sur 11 pages et l'API. Aucun test de parcours (interaction, hors-ligne réel). |
 | Sécurité | 8/10 | Faille haute corrigée, validation Zod sur toutes les écritures, scrypt, cookie chiffré, comparaison à temps constant. Reste un avertissement modéré sur un outil de développement. |
 | Performance | 8/10 | Build en 12,6 s, graphiques sans JS client, pages dynamiques légères (25–140 Ko). |
 | Maintenabilité | 8/10 | Règles métier lisibles et localisées, décisions documentées. Le parseur PDF demande de la vigilance à chaque révision des documents. |

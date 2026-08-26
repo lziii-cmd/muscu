@@ -3,11 +3,12 @@
 Dernière mise à jour : 2026-08-26
 
 ## CONTEXTE ACTUEL
-- Où on en est : **application complète, reconstruite sur les PDF révisés du 26/08 à 02:07**, vérifiée. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 29 tables, référentiel des 17 semaines importé. Typecheck, lint, 116 tests unitaires et test de fumée passent tous. Build en 12,6 s.
+- Où on en est : **application reconstruite sur `PROGRAMME-COMPLET.md`** (déposé le 26/08 à 14:59), qui se déclare source de vérité et remplace les PDF. 120 tests, test de fumée et build au vert. Dépôt git initialisé, premier commit fait (106 fichiers), **pas encore poussé**. Next.js 16 + Drizzle + Neon, PWA hors-ligne, 11 pages, 29 tables, référentiel des 17 semaines importé. Typecheck, lint, 116 tests unitaires et test de fumée passent tous. Build en 12,6 s.
 - Dernière fonctionnalité travaillée : intégration des **alternatives maison** (séance déplaçable plutôt que ratée) et reprise complète du seed sur les nouveaux documents. Avant : test de fumée autonome (`npm run smoke`) — monte sa propre base et son propre serveur, contrôle les 11 pages et les comportements de l'API de synchronisation.
 - Prochaine fonctionnalité prévue : **push GitHub puis déploiement Vercel**. La base Neon est créée (projet « Muscu », région AWS Europe Central 1 Francfort, Postgres 18) ; `DATABASE_URL` reste à renseigner côté Vercel et en local.
 - Problèmes ouverts :
   - Aucun identifiant Neon fourni à ce jour : tout a été vérifié sur PGlite en local.
+  - Les 5 PDF à la racine sont **superflus** depuis l'arrivée du Markdown : à supprimer sur accord de l'utilisateur.
   - Les fiches d'exécution des exercices (position / exécution / erreur à éviter) ne sont pas importées : leur tableau PDF est trop désaligné pour une extraction fiable.
   - Les photos de progression n'ont pas de stockage branché (Vercel Blob à confirmer, seul poste potentiellement payant).
   - Aucune vérification visuelle n'a pu être faite : le panneau navigateur n'est pas affichable dans cet environnement. La vérification est structurelle (HTML rendu + contenu attendu), pas esthétique.
@@ -29,7 +30,11 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Auth mono-utilisateur, scrypt de `node:crypto` | Un seul compte ; évite une dépendance native à compiler | NextAuth, argon2 natif |
 | 2026-08-26 | PGlite en repli local quand `DATABASE_URL` est absente | Permet de développer et de tester sans identifiants Neon ni Docker | Exiger Neon dès le développement |
 | 2026-08-26 | Garde « pas de base locale » sur `VERCEL`, pas sur `NODE_ENV` | Un build de production tourne aussi en local (tests) ; le vrai risque est un déploiement sans base | Garde sur NODE_ENV |
-| 2026-08-26 | Extraction PDF en `pdftotext -table` et non `-layout` | `-table` préserve l'alignement des lignes ; `-layout` faisait dériver les colonnes de droite d'une ligne, imposant des heuristiques d'appariement fragiles — et incapables de lire la colonne « Alternative maison », qui contient elle-même des « 3 × 12 » | `-layout` + appariement par index |
+| 2026-08-26 | **Source = `PROGRAMME-COMPLET.md`**, plus les PDF | Dans un tableau Markdown les cellules sont délimitées : les trois classes de bugs de l'extraction PDF (colonnes qui dérivent, fourchettes écrasées, consignes tronquées) n'ont plus de place où exister | Continuer à parser des PDF |
+| 2026-08-26 | `hold_seconds_low` / `hold_seconds_high` au lieu d'une valeur unique | Une fourchette « 20-30 s » n'est pas une tenue de 30 s ; n'en garder que la borne haute durcit la consigne | Borne haute seule |
+| 2026-08-26 | `max_offset` entier au lieu d'un booléen | Le décalage vaut 1 les jours de force et **2 le jeudi**, journée de volume. Tout ramener à 1 donne deux journées lourdes de tractions par semaine | Supposer toujours −1 |
+| 2026-08-26 | Contrôle bloquant « jeudi plus léger que lundi » | L'erreur était silencieuse et invisible à la relecture : seul un invariant la rattrape | Confiance dans le parsing |
+| 2026-08-26 | Extraction PDF en `pdftotext -table` et non `-layout` *(étape intermédiaire, abandonnée)* | `-table` préserve l'alignement des lignes ; `-layout` faisait dériver les colonnes de droite d'une ligne, imposant des heuristiques d'appariement fragiles — et incapables de lire la colonne « Alternative maison », qui contient elle-même des « 3 × 12 » | `-layout` + appariement par index |
 | 2026-08-26 | Semaine 1 du PPL **plus** transcrite à la main | En `-table` ses tableaux sont lisibles comme les autres ; la transcription manuelle était une dette de maintenance | Garder l'override |
 | 2026-08-26 | Échelles, objectifs et métriques de test **parsés** au lieu d'être transcrits | Ils ont changé entre deux révisions du document sans que rien ne le signale — exactement le risque à éviter | Retranscrire à la main |
 | 2026-08-26 | Séances maison exclues de la progression en charge | Consigne explicite du document : « ne compare pas ses performances à celles de la salle, ce sont deux échelles différentes » | Tout mélanger |
@@ -66,6 +71,9 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Base locale injoignable au lancement | PGlite bundlé par Turbopack : son WASM localisé via `import.meta.url` n'est plus résolu | `serverExternalPackages: ["@electric-sql/pglite"]` |
 | 2026-08-26 | Test de fumée en échec après la 1re exécution | PGlite est mono-processus : le script et le serveur ne voient pas les mêmes écritures | Test rendu autonome : base dédiée (`PGLITE_DIR`) et serveur propre |
 | 2026-08-26 | Faux échecs du test de fumée | React échappe les entités HTML (`Aujourd&#x27;hui`) | Décodage avant comparaison |
+| 2026-08-26 | **Jeudi normalisé à (max − 1) au lieu de (max − 2)** | Le libellé disait max−2, la valeur calculée max−1 ; mon parseur retenait la valeur calculée | `max_offset` lu depuis le libellé, plus un invariant qui refuse le seed si le jeudi n'est pas plus léger que le lundi |
+| 2026-08-26 | **Fourchettes de tenue écrasées** (« 4 × 20-30 s » → « 4 × 30 s ») | `hold[3] ?? hold[2]` retenait la borne haute | Deux colonnes, borne basse et borne haute |
+| 2026-08-26 | Consignes de semaine tronquées | Capture d'une seule ligne, et découpe sur les espaces multiples de `-table` | Source Markdown + repli sur la première ligne de prose |
 | 2026-08-26 | **Seed construit sur des PDF périmés** | Deux versions révisées déposées à 02:07 pendant la construction ; mon dernier inventaire du dossier datait de 01:16 | Reprise complète : réextraction, réécriture des deux parseurs, re-seed. Leçon : réinspecter le dossier avant toute étape qui consomme les sources |
 | 2026-08-26 | Type de séance tronqué (« LEGS A » → « LEGS ») | `-table` insère des espaces à l'intérieur des titres ; ma découpe sur « 2 espaces ou plus » coupait au mauvais endroit | Normalisation des espaces au lieu d'une découpe |
 | 2026-08-26 | Titre de section absorbé par la dernière ligne d'un tableau | Bloc borné uniquement par les titres de jour et de semaine | Bornes élargies aux titres de section et intertitres |
@@ -91,6 +99,13 @@ Dernière mise à jour : 2026-08-26
 | Basse | Pas de tests de parcours (Playwright) | Le test de fumée couvre le rendu et l'API, pas l'interaction | M |
 
 ## NOTES DE SESSION
+
+### 2026-08-26 — troisième partie
+L'utilisateur a relayé une relecture ligne par ligne de mon seed contre ses sources. Les charges de musculation étaient toutes bonnes (116 occurrences vérifiées), mais la partie calisthénie avait quatre défauts, dont deux sérieux. Je les ai vérifiés un par un contre le document plutôt que de les appliquer de confiance : **tous fondés**.
+
+Le plus grave n'était pas une donnée fausse mais une donnée *plausible* : le jeudi ramené à (max − 1) au lieu de (max − 2). Rien ne le signale à la relecture, et le résultat est deux journées lourdes de tractions par semaine chez un débutant. C'est le type d'erreur contre lequel un invariant vaut mieux qu'une relecture — il y en a un maintenant.
+
+Dans la foulée, l'utilisateur a déposé `PROGRAMME-COMPLET.md` : un document Markdown consolidé qui se déclare source de vérité. Bascule complète — quatre parseurs PDF supprimés, un parseur Markdown à la place. Les cellules y étant délimitées, les trois classes de bugs disparaissent par construction plutôt que par correctif.
 
 ### 2026-08-26 — seconde partie
 L'utilisateur a demandé si j'avais bien utilisé ses derniers fichiers. Vérification faite : **non**. Deux PDF révisés déposés à 02:07 pendant la construction, jamais vus. Le seed reposait sur les versions de 00:53.
