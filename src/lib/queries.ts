@@ -816,3 +816,57 @@ export async function hasCalisthenics(): Promise<boolean> {
     .limit(1);
   return Boolean(row);
 }
+
+/**
+ * Fiches d'exécution du compte.
+ *
+ * Ne renvoie que les exercices du programme de la personne : le catalogue est
+ * partagé, mais un guide qui listerait les mouvements de quelqu'un d'autre
+ * serait au mieux du bruit, au pire une consigne pour du matériel absent.
+ */
+export async function getExerciseGuides() {
+  const db = getDb();
+  const userId = await currentUserId();
+
+  const rows = await db
+    .select({
+      exerciseId: schema.exercises.id,
+      name: schema.exercises.name,
+      muscleGroup: schema.exercises.muscleGroup,
+      equipment: schema.exercises.equipment,
+      position: schema.exerciseGuides.position,
+      execution: schema.exerciseGuides.execution,
+      commonMistake: schema.exerciseGuides.commonMistake,
+      note: schema.exerciseGuides.note,
+      fromProgram: schema.exerciseGuides.fromProgram,
+    })
+    .from(schema.exerciseGuides)
+    .innerJoin(schema.exercises, eq(schema.exercises.id, schema.exerciseGuides.exerciseId))
+    .where(eq(schema.exerciseGuides.userId, userId))
+    .orderBy(asc(schema.exercises.name));
+
+  return rows;
+}
+
+/** Fiche d'un exercice pour le compte, ou null si le programme ne l'utilise pas. */
+export async function getExerciseGuide(exerciseId: number) {
+  const db = getDb();
+  const userId = await currentUserId();
+
+  const [row] = await db
+    .select({
+      position: schema.exerciseGuides.position,
+      execution: schema.exerciseGuides.execution,
+      commonMistake: schema.exerciseGuides.commonMistake,
+      note: schema.exerciseGuides.note,
+    })
+    .from(schema.exerciseGuides)
+    .where(
+      and(
+        eq(schema.exerciseGuides.userId, userId),
+        eq(schema.exerciseGuides.exerciseId, exerciseId),
+      ),
+    );
+
+  return row ?? null;
+}

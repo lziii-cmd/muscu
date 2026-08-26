@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T19:36:38.864Z",
+  "generatedAt": "2026-08-26T21:04:16.529Z",
   "year": 2026,
   "source": "PROGRAMME-COMPLET.md",
   "checkpointDates": [
@@ -24566,6 +24566,792 @@
           "sessions": []
         }
       ]
+    }
+  ],
+  "guides": [
+    {
+      "exercise": "Tirage vertical poulie",
+      "position": "Assis, cuisses bloquées, buste très légèrement en arrière",
+      "execution": "Abaisse les épaules d'abord, puis tire la barre vers le haut de la poitrine",
+      "mistake": "Tirer derrière la nuque · se balancer · tirer d'abord avec les bras",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rowing poulie basse assis",
+      "position": "Assis, pieds en appui, dos droit, bras tendus vers la poulie",
+      "execution": "Tire les poignées au nombril en serrant les omoplates, buste immobile. Reviens bras tendus",
+      "mistake": "Se balancer d'avant en arrière · tirer avec les biceps · dos rond au retour",
+      "note": "Le buste ne bouge pas : ce sont les coudes qui partent en arrière",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Face pull",
+      "position": "Debout, poulie à hauteur de visage, corde",
+      "execution": "Tire vers le visage, coudes hauts, écarte les mains en fin de course",
+      "mistake": "Trop lourd : le mouvement devient un rowing",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Curl",
+      "position": "Debout, coudes collés aux côtes",
+      "execution": "Seul l'avant-bras bouge, descente contrôlée jusqu'à bras tendus",
+      "mistake": "Balancer avec le dos · coudes qui avancent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Goblet squat",
+      "position": "Un haltère tenu à deux mains contre la poitrine, coudes vers le bas, pieds un peu plus larges que les hanches",
+      "execution": "Descends en gardant la poitrine haute, coudes entre les genoux en bas. Remonte en poussant le sol",
+      "mistake": "Buste qui s'effondre en avant · descente trop courte",
+      "note": "La charge devant sert de contrepoids : elle aide à rester droite",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Presse à cuisses",
+      "position": "Dos et bassin collés au siège, pieds largeur d'épaules",
+      "execution": "Descends jusqu'à ~90° au genou, pousse avec le talon",
+      "mistake": "Verrouiller les genoux en haut · bas du dos qui décolle du siège en bas",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Leg curl",
+      "position": "Bien calé, axe de la machine aligné sur l'articulation du genou",
+      "execution": "Amplitude complète, 1 s de contraction en fin de course",
+      "mistake": "Balancer la charge par à-coups",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Leg extension",
+      "position": "Bien calé, axe de la machine aligné sur l'articulation du genou",
+      "execution": "Amplitude complète, 1 s de contraction en fin de course",
+      "mistake": "Balancer la charge par à-coups",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Mollets debout",
+      "position": "Debout, avant-pieds sur une marche, talons dans le vide",
+      "execution": "Monte sur la pointe le plus haut possible, marque une seconde, redescends jusqu'à l'étirement complet",
+      "mistake": "Rebondir sans temps d'arrêt · amplitude écourtée en bas",
+      "note": "L'amplitude complète vaut mieux que la charge : descends bien sous le niveau de la marche",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Développé couché machine",
+      "position": "Assis ou allongé, dos plaqué, poignées à hauteur de poitrine",
+      "execution": "Pousse jusqu'à l'extension sans verrouiller violemment, reviens en contrôlant",
+      "mistake": "Décoller le dos du dossier · rebond en fin de course",
+      "note": "La machine impose la trajectoire : concentre-toi sur la vitesse de descente",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Développé militaire haltères",
+      "position": "Assis, dossier vertical, haltères à hauteur d'oreilles, coudes légèrement en avant",
+      "execution": "Pousse vers le haut sans verrouiller violemment. Descends jusqu'au niveau des oreilles",
+      "mistake": "Cambrer le bas du dos pour aider · descendre trop bas",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Écarté poulie ou pec-deck",
+      "position": "Debout entre deux poulies ou assis au pec-deck, bras légèrement fléchis et fixes",
+      "execution": "Rapproche les mains devant la poitrine par un arc de cercle, serre une seconde, reviens en contrôlant",
+      "mistake": "Plier les coudes en cours de route, ce qui transforme l'exercice en développé · aller trop loin en arrière",
+      "note": "Les coudes gardent le même angle du début à la fin",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Élévations latérales",
+      "position": "Debout, haltères le long du corps, coudes très légèrement fléchis",
+      "execution": "Monte sur les côtés jusqu'à hauteur d'épaule seulement, 2 s de descente contrôlée",
+      "mistake": "Trop lourd (le n°1) · balancer le buste · monter au-dessus de l'épaule · tirer avec les trapèzes",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Extension triceps poulie",
+      "position": "Debout face à la poulie haute, coudes collés au corps",
+      "execution": "Seul l'avant-bras bouge. Tends complètement en bas, serre 1 s",
+      "mistake": "Les coudes qui s'écartent ou remontent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Tirage vertical prise neutre",
+      "position": "Assis, cuisses bloquées, buste très légèrement en arrière",
+      "execution": "Abaisse les épaules d'abord, puis tire la barre vers le haut de la poitrine",
+      "mistake": "Tirer derrière la nuque · se balancer · tirer d'abord avec les bras",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rowing haltère unilatéral",
+      "position": "Un genou et une main sur le banc, dos parallèle au sol",
+      "execution": "Laisse l'épaule descendre en bas (étirement), puis tire le coude vers la hanche",
+      "mistake": "Tourner le buste pour aider · tirer avec le biceps seul",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Tirage horizontal poulie",
+      "position": "Assis, jambes légèrement fléchies, buste droit",
+      "execution": "Tire vers le nombril, omoplates qui se rapprochent en fin de course",
+      "mistake": "Se pencher en arrière à chaque rep",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Oiseau",
+      "position": "Buste penché à environ 90°, dos plat, haltères sous la poitrine, coudes légèrement fléchis",
+      "execution": "Écarte les bras sur les côtés jusqu'à hauteur d'épaules, en menant par les coudes",
+      "mistake": "Se redresser pour aider · monter les épaules · charge trop lourde, qui fait travailler les trapèzes",
+      "note": "Charge légère et tempo lent : l'arrière d'épaule répond au contrôle, pas au poids",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Curl marteau",
+      "position": "Debout, haltères le long du corps, paumes face à face, coudes collés aux côtes",
+      "execution": "Monte l'haltère sans bouger le coude, redescends en 2 à 3 s jusqu'aux bras tendus",
+      "mistake": "Balancer le buste · coudes qui avancent · descente relâchée",
+      "note": "Seul l'avant-bras bouge. Si le corps aide, la charge est trop lourde",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Soulevé de terre roumain",
+      "position": "Debout, barre contre les cuisses, jambes quasi tendues (fléchissement léger et fixe)",
+      "execution": "Pousse les hanches vers l'arrière, barre qui frôle les cuisses. Descends jusqu'à l'étirement des ischios et pas plus bas",
+      "mistake": "Arrondir le dos (danger n°1) · plier les genoux comme un squat · descendre trop bas",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Hip thrust",
+      "position": "Haut du dos sur un banc, barre sur le bassin (avec une mousse), pieds à plat",
+      "execution": "Monte en serrant les fessiers, menton rentré, serre 1 s en haut",
+      "mistake": "Cambrer le bas du dos en haut · regarder au plafond",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Fentes marchées",
+      "position": "Debout, haltères le long du corps, buste droit",
+      "execution": "Grand pas en avant, descends jusqu'à ce que le genou arrière frôle le sol, puis enchaîne sur l'autre jambe",
+      "mistake": "Pas trop court, qui met tout sur le genou · buste penché en avant",
+      "note": "Le genou avant reste au-dessus du pied, jamais devant les orteils",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Mollets assis",
+      "position": "Assis, avant-pieds sur une cale, charge posée sur les cuisses",
+      "execution": "Même mouvement, genoux fléchis : c'est le soléaire qui travaille",
+      "mistake": "Rebond · charge posée sur les genoux plutôt que sur les cuisses",
+      "note": "La version assise complète la version debout, elle ne la remplace pas",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Développé couché barre",
+      "position": "Allongé, omoplates serrées et bloquées, pieds ancrés au sol, léger creux lombaire naturel",
+      "execution": "Descends la barre au bas des pectoraux, coudes à ~45° du corps. Pousse sans décoller les fesses",
+      "mistake": "Coudes écartés à 90° (épaule en danger) · rebond sur la poitrine · fesses qui décollent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Développé militaire haltères assis",
+      "position": "Assis, dossier vertical, haltères à hauteur d'oreilles, coudes légèrement en avant",
+      "execution": "Pousse vers le haut sans verrouiller violemment. Descends jusqu'au niveau des oreilles",
+      "mistake": "Cambrer le bas du dos pour aider · descendre trop bas",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Développé incliné haltères",
+      "position": "Banc à 30° maximum, omoplates serrées",
+      "execution": "Descends jusqu'à l'étirement du haut des pectoraux, coudes à 45°",
+      "mistake": "Banc trop incliné : au-delà de 30°, c'est l'épaule qui prend le travail",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Tirage vertical prise large",
+      "position": "Assis, cuisses bloquées, buste très légèrement en arrière",
+      "execution": "Abaisse les épaules d'abord, puis tire la barre vers le haut de la poitrine",
+      "mistake": "Tirer derrière la nuque · se balancer · tirer d'abord avec les bras",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rowing barre buste penché",
+      "position": "Debout, buste à 45°, dos absolument plat, genoux légèrement fléchis",
+      "execution": "Tire la barre vers le nombril, coudes le long du corps, serre 1 s",
+      "mistake": "Dos rond (danger réel) · coup de reins pour lancer la barre · tirer vers la poitrine",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Curl barre",
+      "position": "Debout, coudes collés aux côtes",
+      "execution": "Seul l'avant-bras bouge, descente contrôlée jusqu'à bras tendus",
+      "mistake": "Balancer avec le dos · coudes qui avancent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Squat barre",
+      "position": "Barre sur les trapèzes, pieds largeur d'épaules, orteils légèrement ouverts",
+      "execution": "Descends au minimum cuisse parallèle au sol, genoux dans l'axe des pieds, dos gainé, poitrine haute",
+      "mistake": "Genoux qui rentrent vers l'intérieur · dos qui s'arrondit en bas · talons qui décollent (utilise des cales)",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Fentes bulgares",
+      "position": "Pied arrière sur un banc, pied avant assez loin devant",
+      "execution": "Descends verticalement, genou avant dans l'axe du pied",
+      "mistake": "Pied avant trop près du banc : le genou souffre",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Développé militaire barre ou machine",
+      "position": "Debout ou assis, barre à hauteur de clavicules, mains un peu plus larges que les épaules, abdominaux serrés",
+      "execution": "Pousse la barre à la verticale en reculant légèrement la tête, puis reviens en contrôlant",
+      "mistake": "Cambrer le bas du dos pour aider · pousser en avant plutôt qu'au-dessus",
+      "note": "Si tu dois cambrer, la charge est trop lourde",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Extension triceps nuque haltère",
+      "position": "Assis ou debout, haltère derrière la tête à deux mains",
+      "execution": "Coudes serrés vers l'avant, tends vers le haut",
+      "mistake": "Coudes qui s'écartent : la longue portion ne travaille plus",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Tirage vertical prise supination",
+      "position": "Assis, cuisses bloquées, buste très légèrement en arrière",
+      "execution": "Abaisse les épaules d'abord, puis tire la barre vers le haut de la poitrine",
+      "mistake": "Tirer derrière la nuque · se balancer · tirer d'abord avec les bras",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Oiseau / rear delt fly",
+      "position": "Buste penché à environ 90°, dos plat, haltères sous la poitrine, coudes légèrement fléchis",
+      "execution": "Écarte les bras sur les côtés jusqu'à hauteur d'épaules, en menant par les coudes",
+      "mistake": "Se redresser pour aider · monter les épaules · charge trop lourde, qui fait travailler les trapèzes",
+      "note": "Charge légère et tempo lent : l'arrière d'épaule répond au contrôle, pas au poids",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Leg curl allongé",
+      "position": "Allongé sur la machine, chevilles sous le rouleau, bassin plaqué",
+      "execution": "Ramène les talons vers les fesses, marque un temps, reviens en contrôlant",
+      "mistake": "Décoller le bassin pour aider · relâcher la descente",
+      "note": "La descente lente est ce qui protège l'ischio",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pompes au sol, amplitude complète",
+      "position": "Mains à largeur d'épaules, corps gainé en ligne droite des talons à la tête, regard vers le sol",
+      "execution": "Descends la poitrine à quelques centimètres du sol, coudes à environ 45° du corps. Remonte en poussant le sol",
+      "mistake": "Bassin qui s'affaisse ou qui monte · coudes à 90° · amplitude partielle",
+      "note": "Serre les fessiers : c'est ce qui garde la ligne du corps",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Dips sur chaise, pieds au sol",
+      "position": "Assis au bord d'une chaise, mains de part et d'autre des hanches, pieds devant",
+      "execution": "Descends en pliant les coudes vers l'arrière, jusqu'à un angle droit. Remonte en poussant",
+      "mistake": "Épaules qui montent aux oreilles · coudes qui s'écartent · descendre trop bas",
+      "note": "Plus les pieds sont loin, plus c'est difficile",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Planche ventrale",
+      "position": "Appui sur les avant-bras et les pointes de pieds, coudes sous les épaules",
+      "execution": "Corps en ligne droite des talons à la tête. Serre fessiers et abdominaux, respire calmement",
+      "mistake": "Fesses trop hautes · bas du dos creusé · tête relevée",
+      "note": "Regarde le sol entre tes mains, la nuque reste dans le prolongement du dos",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Préparation poignets (§5)",
+      "position": "À quatre pattes, mains au sol",
+      "execution": "Enchaîne : cercles de poignets, appui paumes doigts vers l'avant, puis doigts vers toi, puis dos des mains, en transférant le poids progressivement",
+      "mistake": "Passer directement à la charge sans échauffement · rester en appui malgré une douleur",
+      "note": "Deux minutes avant chaque séance d'appuis. C'est le poignet qui limite la calisthénie au début",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Hollow body hold (jambes tendues)",
+      "position": "Allongée sur le dos, bas du dos plaqué au sol, bras tendus derrière la tête, jambes tendues",
+      "execution": "Décolle épaules et jambes de quelques centimètres, bas du dos toujours plaqué. Respire",
+      "mistake": "Le moindre espace entre le bas du dos et le sol · retenir sa respiration",
+      "note": "Si le bas du dos décolle, plie les genoux : la position plaquée prime sur l'amplitude",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Dead bug",
+      "position": "Sur le dos, bras tendus vers le plafond, genoux et hanches à 90°",
+      "execution": "Tends un bras et la jambe opposée jusqu'à frôler le sol, reviens, alterne. Le bas du dos reste plaqué",
+      "mistake": "Bas du dos qui décolle · mouvement rapide",
+      "note": "Si le dos décolle, réduis l'amplitude des jambes",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Gainage latéral",
+      "position": "Sur un avant-bras, coude sous l'épaule, corps sur le côté, pieds superposés",
+      "execution": "Monte le bassin, corps aligné de la cheville à la tête. Tiens",
+      "mistake": "Bassin qui s'affaisse · buste qui pivote vers le sol",
+      "note": "Genou du bas au sol pour la version facile, plutôt qu'une position affaissée",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Mobilité hanches et épaules",
+      "position": "Debout ou au sol selon l'articulation visée",
+      "execution": "Mouvements amples et lents, sans charge, dans toute l'amplitude disponible",
+      "mistake": "Chercher l'étirement douloureux · aller vite",
+      "note": "Sert à préparer et à entretenir, jamais à fatiguer",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction australienne",
+      "position": "Barre à hauteur de hanches, allongé dessous, corps en ligne droite des talons aux épaules, talons au sol",
+      "execution": "Tire la poitrine vers la barre en serrant les omoplates. Redescends bras tendus sans casser l'alignement",
+      "mistake": "Bassin qui s'affaisse · tirer avec les mains au lieu des coudes · amplitude partielle",
+      "note": "Plus les pieds sont hauts, plus c'est difficile. C'est le réglage de difficulté, pas la charge",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Scapula pull-ups",
+      "position": "Suspendu bras tendus, épaules relâchées vers les oreilles",
+      "execution": "Sans plier les coudes, abaisse les épaules pour monter le corps de quelques centimètres. Tiens une seconde, relâche en contrôlant",
+      "mistake": "Plier les coudes — ce n'est plus le même exercice · mouvement sec, sans temps d'arrêt",
+      "note": "L'amplitude est petite, cinq à dix centimètres. Elle prépare l'épaule à encaisser la traction",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Y-T-W au sol (à plat ventre)",
+      "position": "À plat ventre, front au sol ou légèrement décollé, bras tendus devant",
+      "execution": "Décolle les bras et dessine successivement un Y, un T et un W, pouces vers le plafond",
+      "mistake": "Forcer la nuque en arrière · monter les épaules aux oreilles",
+      "note": "Charge nulle ou très légère : c'est un exercice de posture, pas de force",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Dead hang",
+      "position": "Suspendu bras tendus, prise pronation, épaules actives, corps immobile",
+      "execution": "Tiens la position en respirant calmement. Le gainage reste léger, la prise fait le travail",
+      "mistake": "Se balancer · serrer la mâchoire et bloquer sa respiration · tenir jusqu'à lâcher brutalement",
+      "note": "Descends volontairement avant de lâcher : c'est la prise qui doit progresser, pas la chute",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pompes au sol, 3 s de descente",
+      "position": "Mains à largeur d'épaules, corps gainé en ligne droite des talons à la tête, regard vers le sol",
+      "execution": "Descends la poitrine à quelques centimètres du sol, coudes à environ 45° du corps. Remonte en poussant le sol",
+      "mistake": "Bassin qui s'affaisse ou qui monte · coudes à 90° · amplitude partielle",
+      "note": "Serre les fessiers : c'est ce qui garde la ligne du corps",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Appui épaules au mur (pieds au sol, corps incliné)",
+      "position": "Debout face au mur, mains au sol à distance d'un pas, corps incliné, pieds au sol",
+      "execution": "Pousse le sol en gardant les épaules devant les mains. Le corps reste en ligne, du talon à la tête",
+      "mistake": "Bassin qui recule · coudes qui s'écartent",
+      "note": "C'est le préalable au pike push-up : rien ne bouge, on cherche l'appui",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Squat au poids du corps, 4 s de descente",
+      "position": "Debout, pieds largeur d'épaules, orteils légèrement ouverts, poitrine haute",
+      "execution": "Descends en 3 s en poussant les genoux dans l'axe des pieds, au moins cuisses parallèles. Remonte en poussant dans les talons",
+      "mistake": "Genoux qui rentrent · talons qui décollent · dos qui s'arrondit en bas",
+      "note": "Si les talons décollent, pose un livre fin dessous le temps de gagner en mobilité",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Montée sur chaise",
+      "position": "Face à une chaise stable, un pied posé dessus à plat",
+      "execution": "Monte en poussant dans le talon du pied posé, sans prendre appui sur la jambe restée au sol. Redescends en contrôlant",
+      "mistake": "Se donner de l'élan avec la jambe du bas · chaise trop haute pour la mobilité disponible",
+      "note": "Le pied qui reste au sol ne fait que frôler : tout le travail vient de la jambe du haut",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Préparation poignets complète (§5)",
+      "position": "À quatre pattes, mains au sol",
+      "execution": "Enchaîne : cercles de poignets, appui paumes doigts vers l'avant, puis doigts vers toi, puis dos des mains, en transférant le poids progressivement",
+      "mistake": "Passer directement à la charge sans échauffement · rester en appui malgré une douleur",
+      "note": "Deux minutes avant chaque séance d'appuis. C'est le poignet qui limite la calisthénie au début",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pike hold (bassin haut, genoux pliés si besoin)",
+      "position": "Mains et pieds au sol, bassin haut, corps en V inversé, dos plat",
+      "execution": "Tiens la position, épaules poussées vers le haut, poids réparti entre mains et pieds",
+      "mistake": "Dos rond · talons qu'on force au sol au détriment du dos",
+      "note": "Genoux légèrement pliés si les ischios limitent : c'est le dos qui doit rester plat",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Mobilité épaules",
+      "position": "Debout ou au sol selon l'articulation visée",
+      "execution": "Mouvements amples et lents, sans charge, dans toute l'amplitude disponible",
+      "mistake": "Chercher l'étirement douloureux · aller vite",
+      "note": "Sert à préparer et à entretenir, jamais à fatiguer",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction négative (5 s de descente)",
+      "position": "Monte au-dessus de la barre par un saut ou une chaise, menton déjà au-dessus, corps gainé",
+      "execution": "Descends le plus lentement possible jusqu'aux bras tendus. Remonte en trichant, la descente seule compte",
+      "mistake": "Se laisser tomber sur les derniers centimètres — c'est là que le travail se fait · lâcher le gainage",
+      "note": "C'est l'exercice qui construit la première traction. Vise une descente régulière, pas un blocage suivi d'une chute",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction australienne, barre haute (corps peu incliné)",
+      "position": "Barre à hauteur de hanches, allongé dessous, corps en ligne droite des talons aux épaules, talons au sol",
+      "execution": "Tire la poitrine vers la barre en serrant les omoplates. Redescends bras tendus sans casser l'alignement",
+      "mistake": "Bassin qui s'affaisse · tirer avec les mains au lieu des coudes · amplitude partielle",
+      "note": "Plus les pieds sont hauts, plus c'est difficile. C'est le réglage de difficulté, pas la charge",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction stricte — 2 reps par série (max − 1)",
+      "position": "Suspendu à la barre, prise pronation légèrement plus large que les épaules, bras tendus, épaules basses et actives. Jambes croisées, corps gainé",
+      "execution": "Amorce en tirant les omoplates vers le bas, puis tire les coudes vers les hanches jusqu'à ce que le menton dépasse la barre. Redescends en 2 à 3 s jusqu'aux bras tendus",
+      "mistake": "Se balancer pour lancer le mouvement · s'arrêter à mi-course en bas · monter le menton en tendant le cou au lieu de tirer",
+      "note": "Une traction stricte finit bras tendus. Si tu ne peux plus contrôler la descente, la série est finie",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction australienne pieds au sol",
+      "position": "Barre à hauteur de hanches, allongé dessous, corps en ligne droite des talons aux épaules, talons au sol",
+      "execution": "Tire la poitrine vers la barre en serrant les omoplates. Redescends bras tendus sans casser l'alignement",
+      "mistake": "Bassin qui s'affaisse · tirer avec les mains au lieu des coudes · amplitude partielle",
+      "note": "Plus les pieds sont hauts, plus c'est difficile. C'est le réglage de difficulté, pas la charge",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pompes au sol",
+      "position": "Mains à largeur d'épaules, corps gainé en ligne droite des talons à la tête, regard vers le sol",
+      "execution": "Descends la poitrine à quelques centimètres du sol, coudes à environ 45° du corps. Remonte en poussant le sol",
+      "mistake": "Bassin qui s'affaisse ou qui monte · coudes à 90° · amplitude partielle",
+      "note": "Serre les fessiers : c'est ce qui garde la ligne du corps",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Dips assistés (élastique ou pieds au sol)",
+      "position": "Mains sur deux appuis parallèles, pieds au sol ou élastique sous les genoux",
+      "execution": "Descends jusqu'à ce que les bras forment un angle droit, buste légèrement penché. Remonte sans verrouiller sèchement",
+      "mistake": "Descendre trop bas, épaules en avant · hausser les épaules vers les oreilles",
+      "note": "Enlève l'assistance progressivement, pas d'un coup",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Tuck hold suspendu (genoux à la poitrine)",
+      "position": "Suspendu bras tendus, épaules actives",
+      "execution": "Remonte les genoux vers la poitrine et tiens, bassin légèrement enroulé, sans balancement",
+      "mistake": "Cambrer le bas du dos · lancer les jambes pour arriver en position",
+      "note": "Le bas du dos reste rond. Si le bassin bascule vers l'avant, la position est perdue",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Relevés de genoux suspendu",
+      "position": "Suspendu bras tendus, épaules actives, corps immobile",
+      "execution": "Monte les genoux vers la poitrine en enroulant le bassin, redescends en contrôlant",
+      "mistake": "Se balancer · descendre les jambes d'un coup",
+      "note": "L'enroulement du bassin en fin de montée est ce qui fait travailler les abdominaux",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Hollow rocks",
+      "position": "Position hollow tenue",
+      "execution": "Balance-toi d'avant en arrière sans casser la position, l'impulsion venant du gainage",
+      "mistake": "Perdre la position pendant le balancement · pousser avec les bras",
+      "note": "L'amplitude du balancement est secondaire, la rigidité du corps est tout",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction australienne pieds surélevés",
+      "position": "Barre à hauteur de hanches, allongé dessous, corps en ligne droite des talons aux épaules, talons au sol",
+      "execution": "Tire la poitrine vers la barre en serrant les omoplates. Redescends bras tendus sans casser l'alignement",
+      "mistake": "Bassin qui s'affaisse · tirer avec les mains au lieu des coudes · amplitude partielle",
+      "note": "Plus les pieds sont hauts, plus c'est difficile. C'est le réglage de difficulté, pas la charge",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pompes pieds surélevés",
+      "position": "Pieds sur une chaise ou un banc, mains au sol",
+      "execution": "Même mouvement que la pompe au sol, avec plus de charge sur le haut des pectoraux et les épaules",
+      "mistake": "Bassin cassé · descendre moins bas parce que c'est plus dur",
+      "note": "La hauteur des pieds est le réglage de difficulté",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Wall walk (marcher les mains vers le mur)",
+      "position": "En appui sur les mains, pieds au sol contre le mur",
+      "execution": "Marche les pieds vers le haut du mur et les mains vers le mur, jusqu'à l'inversion. Redescends de la même façon",
+      "mistake": "Descendre en se laissant tomber · aller plus près que ce que les épaules supportent",
+      "note": "Note la distance des mains au mur : c'est ton unité de progression",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Squat une jambe sur box haute",
+      "position": "Debout sur une box ou une chaise stable, une jambe dans le vide",
+      "execution": "Descends sur la jambe d'appui en contrôlant, l'autre jambe reste tendue devant. Remonte sans à-coup",
+      "mistake": "Se laisser tomber sur la fin · genou qui rentre vers l'intérieur",
+      "note": "Plus la box est haute, plus c'est facile. Baisse-la à mesure que tu progresses",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Mollets sur une jambe",
+      "position": "Debout, avant-pieds sur une marche, talons dans le vide",
+      "execution": "Monte sur la pointe le plus haut possible, marque une seconde, redescends jusqu'à l'étirement complet",
+      "mistake": "Rebondir sans temps d'arrêt · amplitude écourtée en bas",
+      "note": "L'amplitude complète vaut mieux que la charge : descends bien sous le niveau de la marche",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pike hold pieds surélevés",
+      "position": "Mains et pieds au sol, bassin haut, corps en V inversé, dos plat",
+      "execution": "Tiens la position, épaules poussées vers le haut, poids réparti entre mains et pieds",
+      "mistake": "Dos rond · talons qu'on force au sol au détriment du dos",
+      "note": "Genoux légèrement pliés si les ischios limitent : c'est le dos qui doit rester plat",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Hollow hold + arch hold",
+      "position": "Alterne la position hollow, sur le dos, et la position arch, à plat ventre bras et jambes décollés",
+      "execution": "Tiens chaque position le temps prescrit, sans temps mort entre les deux",
+      "mistake": "Cambrer excessivement en arch · relâcher le ventre en hollow",
+      "note": "Les deux positions se répondent : l'une gaine l'avant, l'autre l'arrière",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction stricte — (max − 1) par série",
+      "position": "Suspendu à la barre, prise pronation légèrement plus large que les épaules, bras tendus, épaules basses et actives. Jambes croisées, corps gainé",
+      "execution": "Amorce en tirant les omoplates vers le bas, puis tire les coudes vers les hanches jusqu'à ce que le menton dépasse la barre. Redescends en 2 à 3 s jusqu'aux bras tendus",
+      "mistake": "Se balancer pour lancer le mouvement · s'arrêter à mi-course en bas · monter le menton en tendant le cou au lieu de tirer",
+      "note": "Une traction stricte finit bras tendus. Si tu ne peux plus contrôler la descente, la série est finie",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Dips (assistés → stricts)",
+      "position": "Bras tendus sur les barres, épaules basses",
+      "execution": "Buste penché en avant pour les pectoraux, vertical pour les triceps",
+      "mistake": "Descendre plus bas que le bras parallèle au sol si l'épaule tire",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pompes diamant",
+      "position": "Mains jointes sous la poitrine, index et pouces en losange",
+      "execution": "Descends la poitrine vers les mains, coudes serrés le long du corps",
+      "mistake": "Coudes qui s'écartent, ce qui annule le travail des triceps · poignets non préparés",
+      "note": "C'est la variante triceps. Réduis le nombre de répétitions attendues",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pike push-up pieds au sol",
+      "position": "Position de pike, mains à largeur d'épaules, bassin haut",
+      "execution": "Descends le sommet du crâne vers le sol entre les mains, coudes vers l'arrière puis remonte",
+      "mistake": "Descendre le front vers l'avant, ce qui redevient une pompe · bassin qui s'affaisse",
+      "note": "Plus les pieds sont hauts, plus la charge passe sur les épaules",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Tuck L-sit sur blocs ou chaises",
+      "position": "Assis entre deux blocs ou deux chaises, mains en appui, bras tendus, épaules basses",
+      "execution": "Décolle les fesses en poussant dans les mains, ramène les genoux vers la poitrine et tiens",
+      "mistake": "Épaules qui montent aux oreilles · pieds qui frôlent le sol · retenir sa respiration",
+      "note": "Pousse le sol vers le bas plutôt que d'essayer de monter le corps",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Relevés de jambes suspendu",
+      "position": "Suspendu bras tendus, jambes tendues",
+      "execution": "Monte les jambes tendues jusqu'à l'horizontale au moins, en enroulant le bassin. Redescends lentement",
+      "mistake": "Balancement · genoux qui plient sans qu'on l'assume",
+      "note": "Passe par les genoux repliés tant que le bassin ne s'enroule pas",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Mobilité",
+      "position": "Debout ou au sol selon l'articulation visée",
+      "execution": "Mouvements amples et lents, sans charge, dans toute l'amplitude disponible",
+      "mistake": "Chercher l'étirement douloureux · aller vite",
+      "note": "Sert à préparer et à entretenir, jamais à fatiguer",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction négative lourde (6 s de descente)",
+      "position": "Monte au-dessus de la barre par un saut ou une chaise, menton déjà au-dessus, corps gainé",
+      "execution": "Descends le plus lentement possible jusqu'aux bras tendus. Remonte en trichant, la descente seule compte",
+      "mistake": "Se laisser tomber sur les derniers centimètres — c'est là que le travail se fait · lâcher le gainage",
+      "note": "C'est l'exercice qui construit la première traction. Vise une descente régulière, pas un blocage suivi d'une chute",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Rowing australien pieds surélevés",
+      "position": "Barre à hauteur de hanches, allongé dessous, corps en ligne droite des talons aux épaules, talons au sol",
+      "execution": "Tire la poitrine vers la barre en serrant les omoplates. Redescends bras tendus sans casser l'alignement",
+      "mistake": "Bassin qui s'affaisse · tirer avec les mains au lieu des coudes · amplitude partielle",
+      "note": "Plus les pieds sont hauts, plus c'est difficile. C'est le réglage de difficulté, pas la charge",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pike push-up pieds surélevés",
+      "position": "Position de pike, mains à largeur d'épaules, bassin haut",
+      "execution": "Descends le sommet du crâne vers le sol entre les mains, coudes vers l'arrière puis remonte",
+      "mistake": "Descendre le front vers l'avant, ce qui redevient une pompe · bassin qui s'affaisse",
+      "note": "Plus les pieds sont hauts, plus la charge passe sur les épaules",
+      "fromProgram": false
+    },
+    {
+      "exercise": "ATR ventre au mur",
+      "position": "À plat ventre face au sol, pieds contre le mur, mains au sol près du mur",
+      "execution": "Monte les pieds le long du mur en rapprochant les mains, jusqu'à un corps aligné, ventre face au mur",
+      "mistake": "Cambrer pour compenser le manque de mobilité d'épaules · regarder ses mains, ce qui casse l'alignement",
+      "note": "Le corps forme une ligne. Serre les fessiers et rentre les côtes",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pistol négatif (descente 4 s, remontée 2 jambes)",
+      "position": "Debout sur une jambe, l'autre tendue devant",
+      "execution": "Descends en 4 s jusqu'en bas, puis remonte avec les deux jambes",
+      "mistake": "Chute non contrôlée sur les derniers centimètres",
+      "note": "La descente seule compte. Remonter à deux jambes n'est pas de la triche",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Tuck front lever",
+      "position": "Suspendu bras tendus, épaules actives et légèrement en arrière",
+      "execution": "Bascule le corps à l'horizontale en gardant les genoux ramenés à la poitrine et les bras tendus. Le dos regarde le sol",
+      "mistake": "Plier les coudes pour compenser · cambrer · s'arrêter à mi-bascule",
+      "note": "Bras tendus, sinon ce n'est plus un front lever. Réduis l'amplitude plutôt que de plier",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Hollow + arch",
+      "position": "Alterne la position hollow, sur le dos, et la position arch, à plat ventre bras et jambes décollés",
+      "execution": "Tiens chaque position le temps prescrit, sans temps mort entre les deux",
+      "mistake": "Cambrer excessivement en arch · relâcher le ventre en hollow",
+      "note": "Les deux positions se répondent : l'une gaine l'avant, l'autre l'arrière",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction — (max − 1) par série",
+      "position": "Suspendu à la barre, prise pronation légèrement plus large que les épaules, bras tendus, épaules basses et actives. Jambes croisées, corps gainé",
+      "execution": "Amorce en tirant les omoplates vers le bas, puis tire les coudes vers les hanches jusqu'à ce que le menton dépasse la barre. Redescends en 2 à 3 s jusqu'aux bras tendus",
+      "mistake": "Se balancer pour lancer le mouvement · s'arrêter à mi-course en bas · monter le menton en tendant le cou au lieu de tirer",
+      "note": "Une traction stricte finit bras tendus. Si tu ne peux plus contrôler la descente, la série est finie",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Tuck front lever rows",
+      "position": "Position de tuck front lever tenue",
+      "execution": "Tire la poitrine vers la barre sans perdre l'horizontale, puis redescends bras tendus",
+      "mistake": "Perdre la position groupée pendant la traction · descendre les hanches",
+      "note": "Deux répétitions propres valent mieux que six approximatives",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Dips stricts",
+      "position": "Bras tendus sur les barres, épaules basses",
+      "execution": "Buste penché en avant pour les pectoraux, vertical pour les triceps",
+      "mistake": "Descendre plus bas que le bras parallèle au sol si l'épaule tire",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pike push-up déficit (mains sur blocs)",
+      "position": "Mains sur deux blocs ou deux livres épais, pieds surélevés",
+      "execution": "Même mouvement, la tête descend plus bas que les mains",
+      "mistake": "Chercher la profondeur avant d'avoir la force de remonter",
+      "note": "Le déficit augmente l'amplitude, pas la charge. Deux à cinq centimètres suffisent",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pompes archer",
+      "position": "Mains très écartées, corps gainé",
+      "execution": "Descends d'un côté en pliant un seul bras, l'autre restant tendu. Alterne",
+      "mistake": "Bras tendu qui plie · bassin qui pivote",
+      "note": "Étape vers la pompe à une main : c'est l'unilatéral qui compte, pas l'amplitude",
+      "fromProgram": false
+    },
+    {
+      "exercise": "L-sit une jambe tendue",
+      "position": "Mêmes appuis, bras tendus, épaules basses",
+      "execution": "Jambes tendues devant, parallèles au sol, orteils pointés. Le bassin reste enroulé",
+      "mistake": "Genoux fléchis sans l'assumer · dos qui s'arrondit vers l'avant · épaules hautes",
+      "note": "Une jambe tendue et une jambe groupée est l'étape intermédiaire honnête",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Relevés de jambes tendues suspendu",
+      "position": "Suspendu bras tendus, jambes tendues",
+      "execution": "Monte les jambes tendues jusqu'à l'horizontale au moins, en enroulant le bassin. Redescends lentement",
+      "mistake": "Balancement · genoux qui plient sans qu'on l'assume",
+      "note": "Passe par les genoux repliés tant que le bassin ne s'enroule pas",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Traction supination",
+      "position": "Suspendu, paumes vers toi, mains à largeur d'épaules",
+      "execution": "Même trajectoire que la traction stricte. Les biceps participent davantage : c'est la variante la plus accessible",
+      "mistake": "Coudes qui s'écartent vers l'avant · descente relâchée, qui met les coudes en tension",
+      "note": "Sers-t'en pour gagner des répétitions quand la pronation plafonne",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Rowing australien une main assistée",
+      "position": "Barre à hauteur de hanches, allongé dessous, corps en ligne droite des talons aux épaules, talons au sol",
+      "execution": "Tire la poitrine vers la barre en serrant les omoplates. Redescends bras tendus sans casser l'alignement",
+      "mistake": "Bassin qui s'affaisse · tirer avec les mains au lieu des coudes · amplitude partielle",
+      "note": "Plus les pieds sont hauts, plus c'est difficile. C'est le réglage de difficulté, pas la charge",
+      "fromProgram": false
+    },
+    {
+      "exercise": "HSPU négative au mur (5 s de descente)",
+      "position": "En ATR contre le mur, bras tendus",
+      "execution": "Descends la tête vers le sol le plus lentement possible, puis sors de la position",
+      "mistake": "Se laisser tomber sur la fin · coudes qui s'écartent en grand",
+      "note": "Pose un coussin sous la tête. La descente contrôlée est tout l'exercice",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Pistol avec contrepoids",
+      "position": "Debout sur une jambe, un poids léger tenu à bout de bras devant toi",
+      "execution": "Descends lentement sur la jambe d'appui, l'autre tendue devant. Le contrepoids garde l'équilibre. Remonte en poussant dans le talon",
+      "mistake": "Talon qui décolle · dos qui s'arrondit pour compenser",
+      "note": "Le contrepoids est une aide temporaire : réduis-le au fil des semaines",
+      "fromProgram": false
+    },
+    {
+      "exercise": "ATR dos au mur (alignement)",
+      "position": "Assis dos au mur, mains au sol, jambes lancées contre le mur",
+      "execution": "Talons en appui léger sur le mur, corps aligné, épaules poussées vers le haut",
+      "mistake": "Bassin cassé, jambes en arrière · appui lourd sur le mur",
+      "note": "Plus facile que la version ventre au mur, mais moins alignée : sers-t'en pour tenir, pas pour corriger",
+      "fromProgram": false
+    },
+    {
+      "exercise": "Tuck planche lean",
+      "position": "En appui sur les mains, doigts vers l'avant ou légèrement vers l'extérieur, corps gainé",
+      "execution": "Avance les épaules devant les mains en gardant les bras tendus. Plus les épaules avancent, plus c'est dur",
+      "mistake": "Coudes qui plient · bas du dos qui cambre · poignets non préparés",
+      "note": "Fais toujours la préparation des poignets avant. C'est l'articulation qui limite au début",
+      "fromProgram": false
     }
   ],
   "ladders": [

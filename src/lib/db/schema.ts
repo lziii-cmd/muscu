@@ -169,9 +169,6 @@ export const exercises = pgTable(
     equipment: text("equipment"),
     unit: exerciseUnitEnum("unit").default("reps").notNull(),
     isBodyweight: boolean("is_bodyweight").default(false).notNull(),
-    position: text("position"),
-    execution: text("execution"),
-    commonMistake: text("common_mistake"),
     /**
      * Libellé de l'unité mesurée : « reps », « sauts », « mètres », « minutes ».
      * Permet de suivre une corde à sauter ou une course sans forcer le vocabulaire
@@ -182,6 +179,39 @@ export const exercises = pgTable(
     isCustom: boolean("is_custom").default(false).notNull(),
   },
   (table) => [uniqueIndex("exercises_slug_key").on(table.slug)],
+);
+
+/**
+ * Fiche d'exécution d'un exercice, pour un compte.
+ *
+ * Elle est portée par le compte et non par le catalogue partagé, parce qu'un
+ * même mouvement ne s'explique pas de la même façon selon le matériel : le hip
+ * thrust se fait dos à un banc en salle et dos au canapé à la maison. Écrire la
+ * fiche sur l'exercice ferait gagner la dernière personne importée, et donnerait
+ * à l'autre des consignes pour du matériel qu'elle n'a pas.
+ */
+export const exerciseGuides = pgTable(
+  "exercise_guides",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    exerciseId: integer("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "cascade" }),
+    /** Placement de départ : appuis, prise, orientation. */
+    position: text("position"),
+    /** Le mouvement lui-même, descente comprise. */
+    execution: text("execution"),
+    /** Ce qui rend l'exercice inutile ou dangereux. */
+    commonMistake: text("common_mistake"),
+    /** Sensation attendue, repère de réussite, variante plus facile. */
+    note: text("note"),
+    /** Vrai quand la fiche vient du document du compte plutôt que du fonds commun. */
+    fromProgram: boolean("from_program").default(false).notNull(),
+  },
+  (table) => [uniqueIndex("exercise_guides_unique").on(table.userId, table.exerciseId)],
 );
 
 // ---------------------------------------------------------------------------
@@ -744,6 +774,7 @@ export const schemaTables = {
   ladders,
   ladderLevels,
   ladderProgress,
+  exerciseGuides,
   programs,
   programWeeks,
   programSessions,

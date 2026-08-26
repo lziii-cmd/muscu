@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T19:42:32.904Z",
+  "generatedAt": "2026-08-26T21:04:39.988Z",
   "year": 2026,
   "source": "PROGRAMME-NOURAH.md",
   "checkpointDates": [
@@ -17848,6 +17848,448 @@
           "sessions": []
         }
       ]
+    }
+  ],
+  "guides": [
+    {
+      "exercise": "Fente arrière alternée",
+      "position": "Debout, pieds joints",
+      "execution": "Grand pas en arrière, descends jusqu’à ce que le genou arrière frôle le sol, remonte",
+      "mistake": "Pas trop court · genou avant qui dépasse loin devant l’orteil",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Goblet squat (bouteille contre la poitrine)",
+      "position": "Haltère tenu à deux mains contre la poitrine, coudes vers le bas. Pieds légèrement plus larges que les hanches, orteils tournés vers l’extérieur d’environ 20°.",
+      "execution": "Descends en poussant les genoux vers l’extérieur, dans l’axe des pieds. Va au minimum jusqu’à la cuisse parallèle au sol — plus bas si tes hanches le permettent, c’est encore mieux pour les fessiers. Poitrine haute, dos gainé.",
+      "mistake": "genoux qui rentrent vers l’intérieur · talons qui décollent (mets un livre fin sous les talons) · descente trop courte.",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rowing unilatéral (appui sur chaise)",
+      "position": "Un genou et une main sur la chaise, dos parallèle au sol",
+      "execution": "Laisse l’épaule descendre en bas, puis tire le coude vers la hanche",
+      "mistake": "Tourner le buste pour aider · tirer avec le biceps",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Développé militaire bouteilles",
+      "position": "Assise, dos droit, haltères",
+      "execution": "Pousse vers le haut sans",
+      "mistake": "Cambrer le bas du dos",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Extension triceps au-dessus de la tête",
+      "position": "Haltère à deux mains derrière la tête, coudes serrés vers l’avant",
+      "execution": "Tends les bras vers le haut, redescends lentement",
+      "mistake": "Coudes qui s’écartent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Superman au sol",
+      "position": "À plat ventre, bras tendus devant",
+      "execution": "Décolle bras et jambes simultanément, tiens 2 s",
+      "mistake": "Forcer la nuque en arrière",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Chat-chameau",
+      "position": "À quatre pattes, arrondis puis creuse le dos lentement",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Mobilisation de toute la colonne",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rotation thoracique à genoux",
+      "position": "À genoux, une main derrière la tête, ouvre le coude vers le plafond en tournant",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Rotation dans le haut du dos, pas dans le bas",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Dislocations d’épaules",
+      "position": "Serviette tendue à deux mains, passe-la de devant à derrière bras tendus",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Ouverture des épaules. Écarte les mains si c’est trop dur",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Étirement pectoraux au mur",
+      "position": "Avant-bras contre un mur, tourne le buste dans l’autre sens",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’avant de l’épaule et de la poitrine",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Posture de l’enfant, bras tendus",
+      "position": "À genoux, fesses sur les talons, bras tendus devant, front au sol",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Relâchement du dos et des épaules",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Torsion allongée",
+      "position": "Sur le dos, un genou ramené et basculé de l’autre côté, épaules au sol",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement du bas du dos et de la hanche",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Y-T-W à plat ventre (renfort postural)",
+      "position": "À plat ventre, front au sol",
+      "execution": "Décolle les bras en formant successivement un Y, un T, un W avec les épaules",
+      "mistake": "Utiliser l’élan · décoller la tête",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Montée sur chaise",
+      "position": "Face à une chaise stable, un pied dessus",
+      "execution": "Monte en poussant uniquement avec la jambe du haut, redescends lentement",
+      "mistake": "Prendre appui avec la jambe du bas · impulsion sautée",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pont fessier une jambe",
+      "position": "Idem, une jambe tendue vers le haut",
+      "execution": "Monte le bassin avec une seule jambe, bassin bien horizontal",
+      "mistake": "Laisser une hanche s’affaisser",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Good morning (buste penché, dos plat)",
+      "position": "Debout, mains derrière la tête, jambes quasi tendues",
+      "execution": "Hanches vers l’arrière, buste qui descend vers l’horizontale, dos plat",
+      "mistake": "Arrondir le dos · plier les genoux",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Élévations latérales bouteilles",
+      "position": "Debout, haltères le long du corps, coudes très légèrement fléchis",
+      "execution": "Monte sur les côtés jusqu’à hauteur d’épaule seulement, descends en 2 s",
+      "mistake": "Trop lourd · balancer le buste · monter au-dessus des épaules",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Curl marteau",
+      "position": "Idem mais paumes face à face",
+      "execution": "Même mouvement, prise neutre",
+      "mistake": "Idem",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Salutation au soleil (enchaînement lent)",
+      "position": "Enchaînement debout → flexion → planche → chien tête en bas → retour",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Enchaînement fluide, respiration continue",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Fente basse + rotation du buste",
+      "position": "Grande fente, genou arrière au sol, bassin poussé vers l’avant",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’avant de la hanche arrière",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pigeon",
+      "position": "Jambe avant pliée devant toi au sol, jambe arrière tendue, buste penché",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement profond dans la fesse de la jambe avant",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Papillon + ouverture progressive",
+      "position": "Assise, plantes de pieds jointes, genoux vers le sol",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’intérieur des cuisses",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Étirement ischios debout, jambes tendues",
+      "position": "Assise ou debout, jambe tendue, buste qui descend dos plat",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’arrière de la cuisse. Pas dans le dos",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Grand écart facial progressif (sans forcer)",
+      "position": "Jambes écartées progressivement, mains au sol devant",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement des adducteurs. Jamais de douleur vive",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Torsion allongée + posture de l’enfant",
+      "position": "Sur le dos, un genou ramené et basculé de l’autre côté, épaules au sol",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement du bas du dos et de la hanche",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Squat au poids du corps (3 s de descente)",
+      "position": "Debout, pieds largeur d’épaules, orteils légèrement ouverts",
+      "execution": "Descends en 3 s, cuisses parallèles au sol, remonte en 1 s",
+      "mistake": "Genoux qui rentrent · talons qui décollent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pont fessier au sol",
+      "position": "Allongée sur le dos, genoux pliés, pieds à plat près des fesses",
+      "execution": "Monte le bassin en serrant les fessiers, tiens 1 s en haut",
+      "mistake": "Cambrer le bas du dos au lieu de serrer les fesses",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rowing penché, une bouteille par main",
+      "position": "Haltères en main, buste penché à environ 45°, dos absolument plat, genoux légèrement fléchis, regard vers le sol devant toi.",
+      "execution": "Tire les coudes vers l’arrière et le long du corps, jusqu’à ce que les haltères arrivent au niveau du nombril. Serre les omoplates 1 seconde. Redescends en contrôlant jusqu’aux bras tendus.",
+      "mistake": "dos rond · se redresser à chaque répétition pour aider · tirer avec les biceps au lieu du dos (pense « je tire avec les coudes », pas avec les mains).",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pompes inclinées (mains sur table)",
+      "position": "Mains sur une table (facile) ou une chaise (plus dur), corps en ligne droite",
+      "execution": "Descends la poitrine vers le support, coudes à 45° du corps",
+      "mistake": "Fesses qui montent ou s’affaissent · coudes écartés à 90°",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Curl biceps bouteilles",
+      "position": "Debout, coudes collés aux côtes, paumes vers l’avant",
+      "execution": "Seul l’avant-bras bouge, descends jusqu’aux bras tendus",
+      "mistake": "Balancer le dos · coudes qui avancent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Planche ventrale",
+      "position": "Appui sur les avant-bras et les pointes de pieds, coudes sous les épaules",
+      "execution": "Corps en ligne droite des talons à la tête, fessiers et abdos serrés",
+      "mistake": "Fesses trop hautes (position facile) ou bas du dos creusé (dangereux)",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Fente basse (fléchisseurs de hanche)",
+      "position": "Grande fente, genou arrière au sol, bassin poussé vers l’avant",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’avant de la hanche arrière",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Papillon (adducteurs)",
+      "position": "Assise, plantes de pieds jointes, genoux vers le sol",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’intérieur des cuisses",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Étirement ischios assise, jambe tendue",
+      "position": "Assise ou debout, jambe tendue, buste qui descend dos plat",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Étirement à l’arrière de la cuisse. Pas dans le dos",
+      "fromProgram": true
+    },
+    {
+      "exercise": "90/90 (rotation de hanches assise)",
+      "position": "Assise, une jambe à 90° devant, l’autre à 90° sur le côté, pivote d’un côté à l’autre",
+      "execution": "",
+      "mistake": "",
+      "note": "À sentir : Mobilité en rotation des hanches",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pont fessier lent (réveil musculaire)",
+      "position": "Allongée sur le dos, genoux pliés, pieds à plat près des fesses",
+      "execution": "Monte le bassin en serrant les fessiers, tiens 1 s en haut",
+      "mistake": "Cambrer le bas du dos au lieu de serrer les fesses",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Hip thrust (haut du dos sur le canapé)",
+      "position": "Assieds-toi au sol, dos contre le canapé ou le lit. Le bord du canapé doit se placer juste sous les omoplates, pas plus haut. Pieds à plat, écartés de la largeur des hanches, talons à environ 30 cm des fesses.",
+      "execution": "Pose l’haltère sur le pli des hanches (glisse une serviette pliée dessous, sinon ça fait mal). Pousse avec les talons, monte le bassin jusqu’à ce que le corps forme une ligne droite des genoux aux épaules. Serre les fessiers 1 seconde en haut. Redescends en 3 secondes sans poser les fesses au sol.",
+      "mistake": "Cambrer le bas du dos en haut au lieu de serrer les fessiers → tu travailles les lombaires, pas les fesses. Rentre le menton et regarde devant toi, jamais le plafond. · Talons trop loin → ce sont les ischios qui prennent tout. · Talons trop près → ce sont les cuisses.",
+      "note": "Si tu ne sens pas une brûlure dans les fessiers dès la 6ᵉ répétition, ton bassin ne monte pas assez haut ou tu ne serres pas en fin de mouvement.",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Rowing penché haltères",
+      "position": "Haltères en main, buste penché à environ 45°, dos absolument plat, genoux légèrement fléchis, regard vers le sol devant toi.",
+      "execution": "Tire les coudes vers l’arrière et le long du corps, jusqu’à ce que les haltères arrivent au niveau du nombril. Serre les omoplates 1 seconde. Redescends en contrôlant jusqu’aux bras tendus.",
+      "mistake": "dos rond · se redresser à chaque répétition pour aider · tirer avec les biceps au lieu du dos (pense « je tire avec les coudes », pas avec les mains).",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Curl biceps",
+      "position": "Debout, coudes collés aux côtes, paumes vers l’avant",
+      "execution": "Seul l’avant-bras bouge, descends jusqu’aux bras tendus",
+      "mistake": "Balancer le dos · coudes qui avancent",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Squat bulgare (pied arrière sur chaise)",
+      "position": "Debout, dos à une chaise. Pose le dessus du pied arrière sur l’assise. Le pied avant doit être assez loin devant — c’est l’erreur la plus fréquente de le mettre trop près.",
+      "execution": "Descends verticalement, comme un ascenseur, jusqu’à ce que la cuisse avant soit parallèle au sol. Le genou avant reste dans l’axe du pied. Remonte en poussant dans le talon avant.",
+      "mistake": "pied avant trop près de la chaise (le genou souffre) · buste qui s’effondre en avant · pousser sur la jambe arrière, qui ne sert qu’à l’équilibre.",
+      "note": "Penche légèrement le buste en avant (environ 15°) pour mettre plus de travail dans les fessiers et moins dans le quadriceps.",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Soulevé de terre roumain haltères",
+      "position": "Debout, haltères devant les cuisses, pieds largeur de hanches, jambes presque tendues — un léger fléchissement des genoux que tu ne changes plus de tout le mouvement.",
+      "execution": "Pousse les hanches vers l’arrière (comme pour fermer une porte avec les fesses), les haltères descendent en frôlant les cuisses. Descends jusqu’à sentir l’étirement à l’arrière des cuisses — et pas plus bas. Remonte en poussant les hanches vers l’avant.",
+      "mistake": "Arrondir le dos → c’est le seul vrai risque de blessure de ton programme. Le dos reste plat du début à la fin. · Plier les genoux comme un squat → ce n’est plus le même exercice. · Descendre trop bas → dès que le dos s’arrondit, tu es allée trop loin.",
+      "note": "Tu dois sentir un étirement net à l’arrière des cuisses, jamais dans le bas du dos.",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Développé militaire assise",
+      "position": "Assise, dos droit, haltères",
+      "execution": "Pousse vers le haut sans",
+      "mistake": "Cambrer le bas du dos",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Planche latérale",
+      "position": "Sur un avant-bras, corps de profil, pieds superposés",
+      "execution": "Bassin haut, corps aligné, tiens sans bouger",
+      "mistake": "Bassin qui s’affaisse · épaule qui s’effondre",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Fente arrière haltères",
+      "position": "Debout, pieds joints",
+      "execution": "Grand pas en arrière, descends jusqu’à ce que le genou arrière frôle le sol, remonte",
+      "mistake": "Pas trop court · genou avant qui dépasse loin devant l’orteil",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pull-over allongée sur le tapis",
+      "position": "Allongée sur le tapis, haltère tenu à deux mains au-dessus de la poitrine",
+      "execution": "Descends l’haltère derrière la tête bras quasi tendus, reviens",
+      "mistake": "Cambrer le dos · plier les coudes",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Élévations latérales",
+      "position": "Debout, haltères le long du corps, coudes très légèrement fléchis",
+      "execution": "Monte sur les côtés jusqu’à hauteur d’épaule seulement, descends en 2 s",
+      "mistake": "Trop lourd · balancer le buste · monter au-dessus des épaules",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Hollow body hold",
+      "position": "Allongée sur le dos, bras au-dessus de la tête, jambes tendues",
+      "execution": "Bas du dos plaqué au sol, décolle épaules et jambes de quelques centimètres",
+      "mistake": "Le moindre espace sous les lombaires = position ratée. Plie les genoux si nécessaire",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pompes au sol (ou sur les genoux)",
+      "position": "Mains largeur d’épaules, corps gainé en ligne",
+      "execution": "Descends la poitrine près du sol, remonte. Sur les genoux si trop dur",
+      "mistake": "Ventre qui touche avant la poitrine · demi-amplitude",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Soulevé de terre roumain",
+      "position": "Debout, haltères devant les cuisses, pieds largeur de hanches, jambes presque tendues — un léger fléchissement des genoux que tu ne changes plus de tout le mouvement.",
+      "execution": "Pousse les hanches vers l’arrière (comme pour fermer une porte avec les fesses), les haltères descendent en frôlant les cuisses. Descends jusqu’à sentir l’étirement à l’arrière des cuisses — et pas plus bas. Remonte en poussant les hanches vers l’avant.",
+      "mistake": "Arrondir le dos → c’est le seul vrai risque de blessure de ton programme. Le dos reste plat du début à la fin. · Plier les genoux comme un squat → ce n’est plus le même exercice. · Descendre trop bas → dès que le dos s’arrondit, tu es allée trop loin.",
+      "note": "Tu dois sentir un étirement net à l’arrière des cuisses, jamais dans le bas du dos.",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Dips sur chaise, pieds au sol",
+      "position": "Assise au bord de la chaise, mains de chaque côté des hanches, fesses avancées dans le vide",
+      "execution": "Descends en pliant les coudes vers l’arrière, remonte",
+      "mistake": "Épaules qui montent aux oreilles · descendre trop bas",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Hip thrust une jambe",
+      "position": "Comme le hip thrust, une jambe levée",
+      "execution": "Même mouvement, sans laisser le bassin pencher",
+      "mistake": "Bassin qui tourne · amplitude réduite",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Fente marchée haltères",
+      "position": "Debout, haltères le long du corps",
+      "execution": "Avance en fentes successives, buste droit, descente contrôlée",
+      "mistake": "Se pencher en avant · pas trop petits",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Pull-over allongée",
+      "position": "Allongée sur le tapis, haltère tenu à deux mains au-dessus de la poitrine",
+      "execution": "Descends l’haltère derrière la tête bras quasi tendus, reviens",
+      "mistake": "Cambrer le dos · plier les coudes",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Dips sur chaise",
+      "position": "Assise au bord de la chaise, mains de chaque côté des hanches, fesses avancées dans le vide",
+      "execution": "Descends en pliant les coudes vers l’arrière, remonte",
+      "mistake": "Épaules qui montent aux oreilles · descendre trop bas",
+      "note": "",
+      "fromProgram": true
+    },
+    {
+      "exercise": "Hollow rocks",
+      "position": "Position hollow tenue",
+      "execution": "Balance-toi d’avant en arrière en gardant la position figée",
+      "mistake": "Casser la position pendant le balancement",
+      "note": "",
+      "fromProgram": true
     }
   ],
   "ladders": [],

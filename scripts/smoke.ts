@@ -52,6 +52,7 @@ const PAGES: { path: string; expect: string[] }[] = [
   { path: "/sommeil", expect: ["Sommeil", "Nuit dernière"] },
   { path: "/bilan", expect: ["Bilan de la semaine"] },
   { path: "/exercices", expect: ["Exercices"] },
+  { path: "/guide", expect: ["Comment faire", "Position —", "À éviter —"] },
   { path: "/programme", expect: ["Programme", "Séances prévues", "semaine en cours"] },
   { path: "/seance/2026-08-26", expect: ["août"] },
   { path: "/compte", expect: ["Smoke", "Profil", "Mot de passe", "Pesée du jour", "Fiche"] },

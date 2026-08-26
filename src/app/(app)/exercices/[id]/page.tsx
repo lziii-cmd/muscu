@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Badge, Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { LineChart } from "@/components/charts";
 import { getDb, schema } from "@/lib/db/client";
-import { getExerciseHistory } from "@/lib/queries";
+import { getExerciseGuide, getExerciseHistory } from "@/lib/queries";
 import {
   advanceDoubleProgression,
   bodyPartOf,
@@ -35,8 +35,9 @@ export default async function ExerciceDetailPage(props: PageProps<"/exercices/[i
 
   if (!exercise) notFound();
 
-  const [allHistory, prescriptions] = await Promise.all([
+  const [allHistory, guide, prescriptions] = await Promise.all([
     getExerciseHistory(exerciseId),
+    getExerciseGuide(exerciseId),
     db
       .select({
         repsLow: schema.programExercises.repsLow,
@@ -108,6 +109,38 @@ export default async function ExerciceDetailPage(props: PageProps<"/exercices/[i
           </div>
         }
       />
+
+      {guide ? (
+        <Card className="mb-4">
+          <CardTitle hint="Fiche de ton programme">Comment le faire</CardTitle>
+          <dl className="space-y-1 text-sm">
+            {guide.position ? (
+              <div>
+                <dt className="inline text-faint">Position — </dt>
+                <dd className="inline text-muted">{guide.position}</dd>
+              </div>
+            ) : null}
+            {guide.execution ? (
+              <div>
+                <dt className="inline text-faint">Exécution — </dt>
+                <dd className="inline text-muted">{guide.execution}</dd>
+              </div>
+            ) : null}
+            {guide.commonMistake ? (
+              <div>
+                <dt className="inline text-danger/80">À éviter — </dt>
+                <dd className="inline text-muted">{guide.commonMistake}</dd>
+              </div>
+            ) : null}
+            {guide.note ? (
+              <div>
+                <dt className="inline text-accent/80">Repère — </dt>
+                <dd className="inline text-muted">{guide.note}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </Card>
+      ) : null}
 
       {history.length === 0 ? (
         <EmptyState

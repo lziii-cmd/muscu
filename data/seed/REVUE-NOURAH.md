@@ -9,6 +9,7 @@ Relis ce document avant d'importer. Il dit exactement ce qui entrera en base.
 - 689 lignes d'exercice
 - 7 objectifs jalonnés au 27 décembre
 - 9 mesures relevées aux 4 contrôles
+- 55 fiches d'exécution, dont 55 tirées de son guide
 - aucune échelle de calisthénie : ce programme n'en comporte pas
 
 ## Semaine 1 — Phase 0 — Adaptation (bouteilles 1,5 L)

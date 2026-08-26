@@ -2097,3 +2097,59 @@ lendemain.
 Tu ne coupes jamais : le sommeil, les protéines, et les trois séances de musculation de la semaine.
 
 Une semaine ratée ne casse rien. Trois semaines ratées cassent tout.
+
+
+---
+
+## Partie 4 — Comment faire chaque exercice
+
+Repris du guide d'exécution. Les cinq exercices décisifs y sont décrits en détail, les autres
+en une ligne par champ.
+
+| Exercice | Position | Exécution | Erreur à éviter | Repère |
+|---|---|---|---|---|
+| Hip thrust | Assieds-toi au sol, dos contre le canapé ou le lit. Le bord du canapé doit se placer juste sous les omoplates, pas plus haut. Pieds à plat, écartés de la largeur des hanches, talons à environ 30 cm des fesses. | Pose l’haltère sur le pli des hanches (glisse une serviette pliée dessous, sinon ça fait mal). Pousse avec les talons, monte le bassin jusqu’à ce que le corps forme une ligne droite des genoux aux épaules. Serre les fessiers 1 seconde en haut. Redescends en 3 secondes sans poser les fesses au sol. | Cambrer le bas du dos en haut au lieu de serrer les fessiers → tu travailles les lombaires, pas les fesses. Rentre le menton et regarde devant toi, jamais le plafond. · Talons trop loin → ce sont les ischios qui prennent tout. · Talons trop près → ce sont les cuisses. | Si tu ne sens pas une brûlure dans les fessiers dès la 6ᵉ répétition, ton bassin ne monte pas assez haut ou tu ne serres pas en fin de mouvement. |
+| Squat bulgare | Debout, dos à une chaise. Pose le dessus du pied arrière sur l’assise. Le pied avant doit être assez loin devant — c’est l’erreur la plus fréquente de le mettre trop près. | Descends verticalement, comme un ascenseur, jusqu’à ce que la cuisse avant soit parallèle au sol. Le genou avant reste dans l’axe du pied. Remonte en poussant dans le talon avant. | pied avant trop près de la chaise (le genou souffre) · buste qui s’effondre en avant · pousser sur la jambe arrière, qui ne sert qu’à l’équilibre. | Penche légèrement le buste en avant (environ 15°) pour mettre plus de travail dans les fessiers et moins dans le quadriceps. |
+| Soulevé de terre roumain | Debout, haltères devant les cuisses, pieds largeur de hanches, jambes presque tendues — un léger fléchissement des genoux que tu ne changes plus de tout le mouvement. | Pousse les hanches vers l’arrière (comme pour fermer une porte avec les fesses), les haltères descendent en frôlant les cuisses. Descends jusqu’à sentir l’étirement à l’arrière des cuisses — et pas plus bas. Remonte en poussant les hanches vers l’avant. | Arrondir le dos → c’est le seul vrai risque de blessure de ton programme. Le dos reste plat du début à la fin. · Plier les genoux comme un squat → ce n’est plus le même exercice. · Descendre trop bas → dès que le dos s’arrondit, tu es allée trop loin. | Tu dois sentir un étirement net à l’arrière des cuisses, jamais dans le bas du dos. |
+| Goblet squat | Haltère tenu à deux mains contre la poitrine, coudes vers le bas. Pieds légèrement plus larges que les hanches, orteils tournés vers l’extérieur d’environ 20°. | Descends en poussant les genoux vers l’extérieur, dans l’axe des pieds. Va au minimum jusqu’à la cuisse parallèle au sol — plus bas si tes hanches le permettent, c’est encore mieux pour les fessiers. Poitrine haute, dos gainé. | genoux qui rentrent vers l’intérieur · talons qui décollent (mets un livre fin sous les talons) · descente trop courte. |  |
+| Rowing penché | Haltères en main, buste penché à environ 45°, dos absolument plat, genoux légèrement fléchis, regard vers le sol devant toi. | Tire les coudes vers l’arrière et le long du corps, jusqu’à ce que les haltères arrivent au niveau du nombril. Serre les omoplates 1 seconde. Redescends en contrôlant jusqu’aux bras tendus. | dos rond · se redresser à chaque répétition pour aider · tirer avec les biceps au lieu du dos (pense « je tire avec les coudes », pas avec les mains). |  |
+| Squat au poids du corps | Debout, pieds largeur d’épaules, orteils légèrement ouverts | Descends en 3 s, cuisses parallèles au sol, remonte en 1 s | Genoux qui rentrent · talons qui décollent |  |
+| Pont fessier au sol | Allongée sur le dos, genoux pliés, pieds à plat près des fesses | Monte le bassin en serrant les fessiers, tiens 1 s en haut | Cambrer le bas du dos au lieu de serrer les fesses |  |
+| Pont fessier une jambe | Idem, une jambe tendue vers le haut | Monte le bassin avec une seule jambe, bassin bien horizontal | Laisser une hanche s’affaisser |  |
+| Hip thrust une jambe | Comme le hip thrust, une jambe levée | Même mouvement, sans laisser le bassin pencher | Bassin qui tourne · amplitude réduite |  |
+| Fente arrière | Debout, pieds joints | Grand pas en arrière, descends jusqu’à ce que le genou arrière frôle le sol, remonte | Pas trop court · genou avant qui dépasse loin devant l’orteil |  |
+| Fente marchée | Debout, haltères le long du corps | Avance en fentes successives, buste droit, descente contrôlée | Se pencher en avant · pas trop petits |  |
+| Montée sur chaise | Face à une chaise stable, un pied dessus | Monte en poussant uniquement avec la jambe du haut, redescends lentement | Prendre appui avec la jambe du bas · impulsion sautée |  |
+| Good morning | Debout, mains derrière la tête, jambes quasi tendues | Hanches vers l’arrière, buste qui descend vers l’horizontale, dos plat | Arrondir le dos · plier les genoux |  |
+| Rowing unilatéral | Un genou et une main sur la chaise, dos parallèle au sol | Laisse l’épaule descendre en bas, puis tire le coude vers la hanche | Tourner le buste pour aider · tirer avec le biceps |  |
+| Pull-over | Allongée sur le tapis, haltère tenu à deux mains au-dessus de la poitrine | Descends l’haltère derrière la tête bras quasi tendus, reviens | Cambrer le dos · plier les coudes |  |
+| Pompes inclinées | Mains sur une table (facile) ou une chaise (plus dur), corps en ligne droite | Descends la poitrine vers le support, coudes à 45° du corps | Fesses qui montent ou s’affaissent · coudes écartés à 90° |  |
+| Pompes au sol | Mains largeur d’épaules, corps gainé en ligne | Descends la poitrine près du sol, remonte. Sur les genoux si trop dur | Ventre qui touche avant la poitrine · demi-amplitude |  |
+| Dips sur chaise | Assise au bord de la chaise, mains de chaque côté des hanches, fesses avancées dans le vide | Descends en pliant les coudes vers l’arrière, remonte | Épaules qui montent aux oreilles · descendre trop bas |  |
+| Développé militaire | Assise, dos droit, haltères | Pousse vers le haut sans | Cambrer le bas du dos |  |
+| assise | à hauteur d’oreilles, coudes légèrement en avant | verrouiller brutalement, redescends aux oreilles | pour aider |  |
+| Élévations latérales | Debout, haltères le long du corps, coudes très légèrement fléchis | Monte sur les côtés jusqu’à hauteur d’épaule seulement, descends en 2 s | Trop lourd · balancer le buste · monter au-dessus des épaules |  |
+| Curl biceps | Debout, coudes collés aux côtes, paumes vers l’avant | Seul l’avant-bras bouge, descends jusqu’aux bras tendus | Balancer le dos · coudes qui avancent |  |
+| Curl marteau | Idem mais paumes face à face | Même mouvement, prise neutre | Idem |  |
+| Extension triceps | Haltère à deux mains derrière la tête, coudes serrés vers l’avant | Tends les bras vers le haut, redescends lentement | Coudes qui s’écartent |  |
+| Superman | À plat ventre, bras tendus devant | Décolle bras et jambes simultanément, tiens 2 s | Forcer la nuque en arrière |  |
+| Y-T-W | À plat ventre, front au sol | Décolle les bras en formant successivement un Y, un T, un W avec les épaules | Utiliser l’élan · décoller la tête |  |
+| Planche ventrale | Appui sur les avant-bras et les pointes de pieds, coudes sous les épaules | Corps en ligne droite des talons à la tête, fessiers et abdos serrés | Fesses trop hautes (position facile) ou bas du dos creusé (dangereux) |  |
+| Planche latérale | Sur un avant-bras, corps de profil, pieds superposés | Bassin haut, corps aligné, tiens sans bouger | Bassin qui s’affaisse · épaule qui s’effondre |  |
+| Hollow body hold | Allongée sur le dos, bras au-dessus de la tête, jambes tendues | Bas du dos plaqué au sol, décolle épaules et jambes de quelques centimètres | Le moindre espace sous les lombaires = position ratée. Plie les genoux si nécessaire |  |
+| Hollow rocks | Position hollow tenue | Balance-toi d’avant en arrière en gardant la position figée | Casser la position pendant le balancement |  |
+| Dead bug | Sur le dos, bras vers le plafond, genoux à 90° | Tends un bras et la jambe opposée, reviens, alterne | Bas du dos qui décolle du sol |  |
+| Chat-chameau | À quatre pattes, arrondis puis creuse le dos lentement |  |  | À sentir : Mobilisation de toute la colonne |
+| Rotation thoracique | À genoux, une main derrière la tête, ouvre le coude vers le plafond en tournant |  |  | À sentir : Rotation dans le haut du dos, pas dans le bas |
+| Dislocations d’épaules | Serviette tendue à deux mains, passe-la de devant à derrière bras tendus |  |  | À sentir : Ouverture des épaules. Écarte les mains si c’est trop dur |
+| Étirement pectoraux au mur | Avant-bras contre un mur, tourne le buste dans l’autre sens |  |  | À sentir : Étirement à l’avant de l’épaule et de la poitrine |
+| Posture de l’enfant | À genoux, fesses sur les talons, bras tendus devant, front au sol |  |  | À sentir : Relâchement du dos et des épaules |
+| Torsion allongée | Sur le dos, un genou ramené et basculé de l’autre côté, épaules au sol |  |  | À sentir : Étirement du bas du dos et de la hanche |
+| Fente basse | Grande fente, genou arrière au sol, bassin poussé vers l’avant |  |  | À sentir : Étirement à l’avant de la hanche arrière |
+| Pigeon | Jambe avant pliée devant toi au sol, jambe arrière tendue, buste penché |  |  | À sentir : Étirement profond dans la fesse de la jambe avant |
+| Papillon | Assise, plantes de pieds jointes, genoux vers le sol |  |  | À sentir : Étirement à l’intérieur des cuisses |
+| Étirement ischios | Assise ou debout, jambe tendue, buste qui descend dos plat |  |  | À sentir : Étirement à l’arrière de la cuisse. Pas dans le dos |
+| 90/90 | Assise, une jambe à 90° devant, l’autre à 90° sur le côté, pivote d’un côté à l’autre |  |  | À sentir : Mobilité en rotation des hanches |
+| Grand écart facial | Jambes écartées progressivement, mains au sol devant |  |  | À sentir : Étirement des adducteurs. Jamais de douleur vive |
+| Salutation au soleil | Enchaînement debout → flexion → planche → chien tête en bas → retour |  |  | À sentir : Enchaînement fluide, respiration continue |
+| Balancements de jambe | Debout, appui sur un mur, balance une jambe d’avant en arrière |  |  | À sentir : Réveil de la hanche, sans forcer |

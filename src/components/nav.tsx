@@ -16,6 +16,7 @@ import {
   Ruler,
   Target,
   BookOpen,
+  GraduationCap,
   CloudOff,
   UserRound,
 } from "lucide-react";
@@ -44,6 +45,7 @@ const SECONDARY = [
   { href: "/corps", label: "Corps", icon: Ruler },
   { href: "/tests", label: "Tests & contrôles", icon: Dumbbell },
   { href: "/sommeil", label: "Sommeil", icon: BedDouble },
+  { href: "/guide", label: "Comment faire", icon: GraduationCap },
   { href: "/exercices", label: "Exercices", icon: BookOpen },
   { href: "/compte", label: "Profil", icon: UserRound },
 ];

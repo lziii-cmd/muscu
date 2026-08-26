@@ -4,8 +4,8 @@ Dernière mise à jour : 2026-08-26
 
 ## CONTEXTE ACTUEL
 - Où on en est : **application multi-comptes**. Le passage d'un compte unique à plusieurs comptes est terminé côté code : table `users`, `user_id` sur 17 tables, 14 index d'unicité re-cadrés sur le compte, toutes les requêtes filtrées côté serveur, écrans *Compte* et *Comptes* (administration). Typecheck, lint, 120 tests et test de fumée au vert ; build de production réussi.
-- Dernière fonctionnalité travaillée : **profil** (stature, naissance, poids visé, cibles de diète, IMC et rapport tour de taille / stature, déconnexion) puis **import du programme de Nourah** depuis trois PDF convertis en Markdown.
-- Prochaine fonctionnalité prévue : à définir. Pistes ouvertes : fiches d'exécution des exercices, stockage des photos de progression.
+- Dernière fonctionnalité travaillée : **page « Comment faire »** — toutes les fiches d'exécution, par compte. 98 fiches pour Abdou, 55 pour Nourah, couverture complète des deux programmes.
+- Prochaine fonctionnalité prévue : à définir. L'utilisateur a demandé si une **page d'inscription avec génération de programme par un agent IA** était possible ; réponse donnée (oui, avec des réserves sur les allergies, le « plausible mais faux » et l'ouverture de l'inscription), décision non prise.
 - Problèmes ouverts :
   - Base Neon **migrée sans destruction** par `0002_comptes.sql` : le compte `abdou` créé sur le site déployé a été repris tel quel, avec son mot de passe et ses données. Les trois comptes existent ; les deux programmes sont importés (Abdou 299 séances sur 17 semaines, Nourah 124 jours sur 18 semaines).
   - Les mots de passe initiaux ont transité par la conversation : **à changer au premier passage** depuis l'écran *Compte*. Un bandeau le rappelle tant que c'est le cas.
@@ -40,6 +40,10 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | Le seed porte une **liste** de programmes | Nourah n'en a qu'un, Abdou deux. Des champs nommés en dur obligeraient à lui inventer une calisthénie vide | `ppl` / `calisthenie` en dur |
 | 2026-08-26 | Tout ce qui décrit le programme vient du compte | Neuf endroits portaient les dates du premier programme, dont le calcul du lundi de la semaine N — sur un programme démarrant deux jours plus tard, les colonnes de charges se décalaient sans rien afficher d'anormal | Constantes partagées |
 | 2026-08-26 | L'onglet Calisthénie disparaît sans échelle | Un onglet vide se lit comme une panne, pas comme une absence voulue | Onglet toujours visible |
+| 2026-08-26 | Fiches d'exécution portées par le **compte**, pas par le catalogue | Le hip thrust se fait dos à un banc en salle et dos au canapé à la maison : une fiche unique serait fausse pour l'un des deux, et le dernier import gagnerait | Colonnes sur `exercises` |
+| 2026-08-26 | Table d'alias **explicite** pour les variantes de nom | Un rapprochement par préfixe confondrait « Traction » et « Traction australienne » — l'un vertical, l'autre horizontal | Correspondance par préfixe |
+| 2026-08-26 | Un exercice sans fiche bloque la construction du seed | Une page « comment faire » avec des trous ne remplit pas son office | Avertissement non bloquant |
+| 2026-08-26 | Import des fiches séparé de l'import du programme | Le programme ne peut plus être réécrit dès qu'une séance est enregistrée ; les fiches, elles, ne dépendent pas du calendrier | Tout passer par `db:seed` |
 | 2026-08-26 | PGlite en repli local quand `DATABASE_URL` est absente | Permet de développer et de tester sans identifiants Neon ni Docker | Exiger Neon dès le développement |
 | 2026-08-26 | Garde « pas de base locale » sur `VERCEL`, pas sur `NODE_ENV` | Un build de production tourne aussi en local (tests) ; le vrai risque est un déploiement sans base | Garde sur NODE_ENV |
 | 2026-08-26 | **Source = `PROGRAMME-COMPLET.md`**, plus les PDF | Dans un tableau Markdown les cellules sont délimitées : les trois classes de bugs de l'extraction PDF (colonnes qui dérivent, fourchettes écrasées, consignes tronquées) n'ont plus de place où exister | Continuer à parser des PDF |
@@ -76,6 +80,9 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | **Profil** | fait | Stature, naissance, poids visé, cibles de diète, IMC et rapport tour de taille / stature, pesée du jour, déconnexion |
 | 2026-08-26 | **Programme de Nourah** | fait | 3 PDF → `PROGRAMME-NOURAH.md` → seed : 18 semaines, 124 jours, 689 lignes, 7 objectifs, 9 mesures, 4 contrôles |
 | 2026-08-26 | Programme entièrement piloté par le compte | fait | Bornes, blocs, contrôles, onglet calisthénie : plus rien en dur |
+| 2026-08-26 | **Page « Comment faire »** | fait | 98 fiches Abdou, 55 Nourah, couverture 100 % des deux programmes ; fiche reprise sur la page d'un exercice |
+| 2026-08-26 | Guide d'exécution de Nourah converti | fait | PDF prose + tableaux → 45 fiches dans `PROGRAMME-NOURAH.md` |
+| 2026-08-26 | Fonds commun de 55 fiches | fait | `data/guides/commun.md`, pour ce qu'aucun document ne décrit |
 | 2026-08-26 | Migration `0002_comptes.sql` **additive** | fait | Répétée sur base neuve et sur une copie du scénario de production avant d'être appliquée à Neon |
 | 2026-08-26 | Déploiement Neon en multi-comptes | fait | 3 comptes, programme d'Abdou importé (299 séances), aucune donnée perdue |
 
@@ -120,6 +127,8 @@ Dernière mise à jour : 2026-08-26
 - **Rien du programme ne doit revenir en dur.** Dates, nombre de semaines, noms de blocs, dates de contrôle, présence de la calisthénie : tout vient du compte. Une constante réintroduite serait juste pour l'un et fausse pour l'autre, sans rien afficher d'anormal.
 - **Nourah ne fait pas de calisthénie.** Son programme est une musculation à domicile : ni échelle de progression, ni max de tractions.
 - **Deux tables de charges, pas une.** `load_raw` porte la barre ou la machine, `dumbbell_raw` l'haltère — où « 8 kg » signifie huit kilos dans *chaque* main. Les confondre double ou divise la charge réelle.
+- **Le programme d'Abdou ne peut plus être réécrit par `db:seed`.** Des séances sont enregistrées et les référencent ; la clé étrangère refuse. C'est voulu. Pour changer les fiches, `npm run db:guides`. Pour changer le programme lui-même, il faudra une migration qui préserve le journal.
+- **Une fiche manquante bloque le seed.** Ajouter un exercice à un programme oblige à écrire sa fiche, dans le document du compte ou dans `data/guides/commun.md`.
 - **Ne jamais afficher une courbe de poids seule.** En recomposition, le poids ment : la lecture croise toujours poids lissé + tour de taille + charges.
 - **La saisie doit tenir en une main, à 23h.** Cibles tactiles ≥ 44 px, clavier numérique, une charge par exercice et non par série.
 - **Le seed n'est pas une vérité absolue.** `data/seed/REVUE.md` existe pour être relu ; les valeurs prescrites restent éditables dans l'application.
@@ -167,6 +176,16 @@ Le programme de Nourah est arrivé en trois PDF. Ils s'extrayaient proprement, d
 Son programme est structurellement différent : une séance par jour à domicile, pas de calisthénie, pas d'alternative maison — c'est déjà la maison — et surtout 18 semaines du 26 août au 27 décembre, là où celui d'Abdou fait 17 semaines du 24 août au 20 décembre. Neuf endroits du code portaient les dates du premier. Le plus grave n'était pas un libellé mais le calcul du lundi de la semaine N : sur un programme démarrant deux jours plus tard, toutes les colonnes de charges se seraient décalées d'une semaine, en affichant des valeurs plausibles. Tout vient désormais du compte.
 
 Un dernier défaut est apparu à l'écran : les exercices aux haltères n'affichaient aucune charge prescrite. L'affichage ne lisait que la colonne barre/machine, alors que les haltères ont la leur — 167 lignes concernées chez Abdou, 128 chez Nourah. Il était là depuis le début et personne ne l'avait vu, faute de comparer deux programmes.
+
+### 2026-08-26 — sixième partie
+
+Demande : une page par compte expliquant tous les exercices, un par un. Et une question posée avant de commencer — peut-on ajouter une inscription qui interroge la personne (objectifs, taille, poids, sèche ou prise de masse, salle ou maison, allergies) et fasse générer son programme par un agent IA ? Réponse donnée : oui, la chaîne d'import existante ferait le travail, l'agent ne remplaçant que le premier maillon ; avec trois réserves — les allergies doivent être une règle de validation et non une consigne de prompt, le « plausible mais faux » est le risque principal et impose de généraliser les invariants, et ouvrir l'inscription sur une adresse publique est une décision de sécurité. Pas de décision prise.
+
+Pour les fiches, les documents ne couvraient qu'une partie : 20 fiches sur 111 exercices côté Abdou, rien pour Nourah — jusqu'à ce qu'elle fournisse son guide d'exécution, qui en apporte 45. Le reste — 55 fiches — a été écrit dans un fonds commun.
+
+Deux décisions ont porté le travail. Les fiches sont **portées par le compte** : le hip thrust se fait dos à un banc en salle et dos au canapé à la maison, une fiche unique serait fausse pour l'un des deux. Et les variantes de nom passent par une **table d'alias explicite** plutôt que par un rapprochement automatique : « Traction » et « Traction australienne » se ressemblent et ne sont pas le même mouvement.
+
+Le déploiement a buté sur la protection posée plus tôt : Abdou a enregistré trois séances, qui référencent ses exercices prescrits, et `db:seed` refuse donc de réécrire son programme. C'est exactement le comportement voulu. Les fiches n'ayant rien à voir avec le calendrier, elles ont désormais leur propre import, `npm run db:guides`, qui ne touche à rien d'autre.
 
 ### 2026-08-26 — troisième partie
 L'utilisateur a relayé une relecture ligne par ligne de mon seed contre ses sources. Les charges de musculation étaient toutes bonnes (116 occurrences vérifiées), mais la partie calisthénie avait quatre défauts, dont deux sérieux. Je les ai vérifiés un par un contre le document plutôt que de les appliquer de confiance : **tous fondés**.

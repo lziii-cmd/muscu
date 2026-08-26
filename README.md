@@ -146,7 +146,9 @@ journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 | `npm run db:reset` | **Destructif** — vide le schéma |
 | `npm run seed:build` | Reconstruit le seed depuis `PROGRAMME-COMPLET.md` |
 | `npm run nourah:convert` | Convertit les PDF de Nourah en `PROGRAMME-NOURAH.md` |
+| `npm run nourah:guide` | Ajoute son guide d'exécution au Markdown |
 | `npm run nourah:seed` | Reconstruit son seed depuis ce Markdown |
+| `npm run db:guides -- --user X` | Importe les seules fiches d'exécution |
 | `npm run smoke` | Test de fumée autonome (après `npm run build`) — tourne toujours sur PGlite, jamais sur Neon |
 | `npm run users -- password --user X --password "…"` | Remplace le mot de passe d'un compte |
 | `npm run users -- rename --user X --name "…"` | Change le nom affiché |
@@ -191,6 +193,25 @@ Les mots de passe sont hachés avec scrypt (sel aléatoire, `N = 16384`) et comp
 constant. Personne — pas même l'administrateur — ne peut relire un mot de passe : il ne peut qu'en
 imposer un nouveau. Tant qu'un compte utilise son mot de passe d'origine, un bandeau le rappelle
 sur chaque écran ; il disparaît au premier changement.
+
+### Comment faire chaque exercice
+
+Chaque compte a sa page **Comment faire** : tous les exercices de son programme,
+un par un — placement, mouvement, erreur à éviter, repère de réussite. La même fiche apparaît sur
+la page d'un exercice, là où on la cherche entre deux séries.
+
+Les fiches sont portées par le compte, pas par le catalogue partagé. Un même mouvement ne
+s'explique pas de la même façon selon le matériel : le hip thrust se fait dos à un banc en salle et
+dos au canapé à la maison. Une fiche unique serait fausse pour l'un des deux.
+
+Trois sources, par ordre de priorité : le document du compte quand il décrit l'exercice, puis le
+fonds commun `data/guides/commun.md`. Les variantes de nom — « Pompes au sol, 3 s de descente »,
+« Traction stricte — (max − 2) par série » — sont ramenées au mouvement par `data/guides/alias.md`,
+une table explicite : un rapprochement automatique par préfixe confondrait « Traction » et
+« Traction australienne », qui sont deux mouvements différents.
+
+**Un exercice sans fiche bloque la construction du seed.** Une page « comment faire » avec des
+trous ne remplit pas son office.
 
 ### Rien du programme n'est écrit dans le code
 

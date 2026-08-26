@@ -20,7 +20,9 @@
     "smoke": "tsx scripts/smoke.ts",
     "users": "tsx scripts/users.ts",
     "nourah:convert": "tsx scripts/convert-nourah.ts",
-    "nourah:seed": "tsx scripts/build-seed-nourah.ts"
+    "nourah:seed": "tsx scripts/build-seed-nourah.ts",
+    "nourah:guide": "tsx scripts/convert-nourah-guide.ts",
+    "db:guides": "tsx scripts/seed-guides.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

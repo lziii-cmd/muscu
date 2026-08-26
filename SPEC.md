@@ -44,7 +44,7 @@ et il est couvert.
 
 ## 3. Modèle de données
 
-29 tables. Migration : `drizzle/0000_init.sql`.
+30 tables. Migrations : `drizzle/0000_init.sql` à `0004_fiches-exercices.sql`.
 
 ### Comptes
 `users` : identifiant unique, empreinte scrypt du mot de passe, nom affiché, rôle (`user` /
@@ -222,7 +222,21 @@ consignes hebdomadaires, dates de contrôle et présence de l'onglet *Calisthén
 programme importé pour le compte connecté. Un compte sans programme reste utilisable : diète,
 poids, sommeil, entraînements libres.
 
-### 4.20 Photos de progression — non implémenté
+### 4.20 Comment faire chaque exercice — stable
+Une page par compte listant **tous** les exercices de son programme, groupés comme une séance
+(poussée, tirage, jambes, gainage, mobilité) : position de départ, exécution, erreur à éviter,
+repère de réussite. La même fiche s'affiche sur la page d'un exercice.
+
+Les fiches sont portées par le compte : `exercise_guides (user_id, exercise_id)`. Le catalogue
+d'exercices reste partagé, mais l'explication ne peut pas l'être — le matériel diffère.
+
+Sources par priorité : le document du compte, puis `data/guides/commun.md`. `data/guides/alias.md`
+ramène les variantes de nom au mouvement. La construction du seed **refuse d'écrire** si un
+exercice n'a pas de fiche.
+
+Couverture : 98 fiches pour le programme de salle, 55 pour celui de la maison.
+
+### 4.21 Photos de progression — non implémenté
 Stockage externe à trancher (Vercel Blob, seul poste potentiellement payant).
 
 ---
@@ -298,7 +312,6 @@ Retirées en cours de route : `recharts` (SVG maison), `@serwist/next` et `serwi
 
 1. **Changer les mots de passe initiaux** depuis l'écran *Profil* : ils ont transité par une
    conversation et une ligne de commande.
-2. Importer les fiches d'exécution des exercices.
 3. Brancher le stockage des photos de progression.
 4. Ajouter des tests de parcours, notamment du mode hors-ligne réel.
 5. Mettre en place une CI (`npm run verify`).

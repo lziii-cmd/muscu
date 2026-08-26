@@ -12,6 +12,7 @@
  * qu'un seed absent, et une charge fausse ferait charger la mauvaise barre.
  */
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { resolveGuides } from "./lib/resolve-guides";
 import { parseProgramme, CHECKPOINT_DATES, type ProgramDay } from "./lib/program-parser";
 import type { Volume } from "./lib/volume";
 import { weekdayOf } from "./lib/dates";
@@ -119,6 +120,28 @@ if (problems.length > 0) {
 // ---------------------------------------------------------------------------
 mkdirSync("data/seed", { recursive: true });
 
+/*
+ * Fiches d'exécution : une par exercice du programme. Le document du compte
+ * l'emporte sur le fonds commun, et l'absence d'une fiche est bloquante — une
+ * page « comment faire » avec des trous ne remplit pas son office.
+ */
+const exerciseNames = [
+  ...new Set(
+    [...parsed.ppl.days, ...parsed.calisthenie.days]
+      .flatMap((day) => day.sessions)
+      .flatMap((session) => session.exercises)
+      .map((exercise) => exercise.name.replace(/\s+/g, " ").trim()),
+  ),
+];
+const { guides, missing: missingGuides } = resolveGuides(exerciseNames, {
+  own: { path: SOURCE, heading: "## Comment faire chaque exercice" },
+});
+if (missingGuides.length > 0) {
+  console.error("✗ Seed NON écrit — exercices sans fiche d'exécution :");
+  for (const name of missingGuides) console.error(`   · ${name}`);
+  process.exit(1);
+}
+
 writeFileSync(
   "data/seed/programme.json",
   JSON.stringify(
@@ -148,6 +171,7 @@ writeFileSync(
           days: parsed.calisthenie.days,
         },
       ],
+      guides,
       ladders: parsed.ladders,
       targets: parsed.targets,
       testMetrics: parsed.testMetrics,

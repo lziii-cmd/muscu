@@ -33,10 +33,21 @@ interface SeedProgram {
  * Nourah n'a qu'un programme à domicile, celui d'Abdou en a deux. Nommer les
  * parties en dur obligerait à inventer une calisthénie vide pour elle.
  */
+/** Fiche d'exécution résolue à la construction du seed. */
+interface SeedGuide {
+  exercise: string;
+  position: string;
+  execution: string;
+  mistake: string;
+  note: string;
+  fromProgram: boolean;
+}
+
 interface SeedFile {
   source: string;
   checkpointDates: string[];
   programs: SeedProgram[];
+  guides: SeedGuide[];
   ladders: ParsedProgram["ladders"];
   targets: ParsedProgram["targets"];
   testMetrics: ParsedProgram["testMetrics"];
@@ -175,6 +186,7 @@ async function main() {
     delete from ladder_levels where ladder_id in (
       select id from ladders where user_id = ${userId})`);
   await db.execute(`delete from ladders where user_id = ${userId}`);
+  await db.execute(`delete from exercise_guides where user_id = ${userId}`);
   await db.execute(`delete from targets where user_id = ${userId}`);
   await db.execute(`delete from test_metrics where user_id = ${userId}`);
 
@@ -196,6 +208,28 @@ async function main() {
   for (const row of await db.query<{ id: number; slug: string }>("select id, slug from exercises")) {
     exerciseIds.set(row.slug, row.id);
   }
+
+  // -------------------------------------------------------------------------
+  // Fiches d'exécution, propres au compte : le même mouvement ne s'explique pas
+  // de la même façon selon le matériel dont la personne dispose.
+  // -------------------------------------------------------------------------
+  let guideCount = 0;
+  for (const guide of seed.guides ?? []) {
+    const exerciseId = exerciseIds.get(slugify(guide.exercise.replace(/\s+/g, " ").trim()));
+    if (!exerciseId) continue;
+
+    await db.execute(
+      `insert into exercise_guides (user_id, exercise_id, position, execution, common_mistake, note, from_program)
+       values (${userId}, ${exerciseId}, ${q(guide.position || null)}, ${q(guide.execution || null)},
+               ${q(guide.mistake || null)}, ${q(guide.note || null)}, ${q(guide.fromProgram)})
+       on conflict (user_id, exercise_id) do update set
+         position = excluded.position, execution = excluded.execution,
+         common_mistake = excluded.common_mistake, note = excluded.note,
+         from_program = excluded.from_program`,
+    );
+    guideCount += 1;
+  }
+  console.log(`  ${guideCount} fiches d'exécution`);
 
   // -------------------------------------------------------------------------
   // Échelles de progression, avec le niveau de départ du document.

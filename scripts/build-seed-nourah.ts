@@ -15,6 +15,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { column, readTable } from "./lib/markdown";
 import { parseVolume, parseRest, parseKg } from "./lib/volume";
 import { parseFrenchDate } from "./lib/dates";
+import { resolveGuides } from "./lib/resolve-guides";
 
 const SOURCE = "PROGRAMME-NOURAH.md";
 const YEAR = 2026;
@@ -291,6 +292,23 @@ function main() {
     process.exit(1);
   }
 
+  /*
+   * Fiches d'exécution : une par exercice. Son guide décrit la plupart des
+   * mouvements ; le fonds commun couvre le reste. Un exercice sans fiche est
+   * bloquant — une page « comment faire » avec des trous ne sert à rien.
+   */
+  const exerciseNames = [
+    ...new Set(days.flatMap((day) => day.lines).map((line) => line.name.replace(/\s+/g, " ").trim())),
+  ];
+  const { guides, missing: missingGuides } = resolveGuides(exerciseNames, {
+    own: { path: SOURCE, heading: "## Partie 4 — Comment faire chaque exercice" },
+  });
+  if (missingGuides.length > 0) {
+    console.error("✗ Seed NON écrit — exercices sans fiche d'exécution :");
+    for (const name of missingGuides) console.error(`   · ${name}`);
+    process.exit(1);
+  }
+
   const programDays = toProgramDays(days);
   const lastDay = CHECKPOINT_DATES[CHECKPOINT_DATES.length - 1];
 
@@ -329,6 +347,7 @@ function main() {
             days: programDays,
           },
         ],
+        guides,
         // Pas de calisthénie dans ce programme : aucune échelle de progression.
         ladders: [],
         targets,
@@ -355,6 +374,7 @@ function main() {
   out.push(`- ${days.reduce((n, d) => n + d.lines.length, 0)} lignes d'exercice`);
   out.push(`- ${targets.length} objectifs jalonnés au 27 décembre`);
   out.push(`- ${TEST_METRICS.length} mesures relevées aux ${CHECKPOINT_DATES.length} contrôles`);
+  out.push(`- ${guides.length} fiches d'exécution, dont ${guides.filter((g) => g.fromProgram).length} tirées de son guide`);
   out.push("- aucune échelle de calisthénie : ce programme n'en comporte pas");
   out.push("");
 
@@ -394,6 +414,7 @@ function main() {
   console.log(`  Source        : ${SOURCE}`);
   console.log(`  Programme     : ${weeks.length} semaines, ${days.length} jours, ${days.reduce((n, d) => n + d.lines.length, 0)} lignes`);
   console.log(`  Objectifs     : ${targets.length} · Métriques : ${TEST_METRICS.length}`);
+  console.log(`  Fiches        : ${guides.length}, dont ${guides.filter((g) => g.fromProgram).length} de son guide`);
   console.log(`  Contrôles     : ${CHECKPOINT_DATES.join(", ")}`);
   console.log(`  Dernier jour  : ${days.at(-1)?.date} (contrôle final ${lastDay})`);
   if (warnings.length > 0) {
