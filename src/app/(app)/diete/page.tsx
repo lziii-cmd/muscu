@@ -144,12 +144,12 @@ export default async function DietePage() {
               <strong className="text-text">Déficit léger.</strong> {deficit.message}
             </li>
             <li>
-              <strong className="text-text">Le repas de 20h est obligatoire.</strong> Complet, glucides
-              inclus, 2 à 3 h avant la séance de 22h. Arriver à jeun ne fonctionne pas.
+              <strong className="text-text">Le dîner de 19h est obligatoire.</strong> Complet, glucides
+              inclus, 3 h avant la séance de 22h. Arriver à jeun ne fonctionne pas.
             </li>
             <li>
-              <strong className="text-text">La règle de minuit.</strong> Après la séance : léger et
-              protéiné. Un gros repas à cette heure dégrade le sommeil.
+              <strong className="text-text">Le post-séance de 23h15.</strong> Léger et protéiné : shaker
+              whey ou lait caillé. Un gros repas à cette heure dégrade le sommeil.
             </li>
             <li>
               <strong className="text-text">Aucun stimulant après 19h.</strong> La caféine a 5 à 6 h de

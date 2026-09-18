@@ -45,7 +45,8 @@ const PAGES: { path: string; expect: string[] }[] = [
   { path: "/", expect: ["Aujourd'hui"] },
   { path: "/journal", expect: ["Journal", "Calendrier du programme", "Assiduité par créneau"] },
   { path: "/progression", expect: ["Progression"] },
-  { path: "/calisthenie", expect: ["Calisthénie", "échelles", "Max tractions"] },
+  // Les échelles n'existent plus dans la version 2 : la page tient sur le max et les objectifs.
+  { path: "/calisthenie", expect: ["Calisthénie", "Max tractions", "Objectifs jalonnés"] },
   { path: "/corps", expect: ["Corps", "Pesée"] },
   { path: "/tests", expect: ["Tests & contrôles", "Test de force"] },
   { path: "/diete", expect: ["Diète", "Protéines", "Huile", "Repas de la journée"] },

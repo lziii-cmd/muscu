@@ -34,6 +34,11 @@ describe("barre ou machine", () => {
   it("se rabat sur le nom quand le matériel est inconnu", () => {
     expect(barOrMachine("Hip thrust", "autre")).toBe("barre");
     expect(barOrMachine("Leg extension", null)).toBe("machine");
+    expect(barOrMachine("Mollets assis", "autre")).toBe("machine");
+  });
+
+  it("laisse le premier mot trancher quand il nomme la barre", () => {
+    expect(barOrMachine("Barre au front ou kickback poulie", "poulie")).toBe("barre");
   });
 });
 

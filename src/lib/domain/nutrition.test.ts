@@ -32,7 +32,7 @@ describe("proteinProgress", () => {
   it("traduit le manque en aliments concrets", () => {
     const progress = proteinProgress(100, target);
     expect(progress.status).toBe("insuffisant");
-    expect(progress.message).toMatch(/œufs|yaboy/);
+    expect(progress.message).toMatch(/œufs ou \d+ g de poulet/);
   });
 
   it("qualifie de proche au-delà de 80 %", () => {

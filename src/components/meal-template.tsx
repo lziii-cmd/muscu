@@ -14,23 +14,28 @@ import { enqueue } from "@/lib/local/db";
  * toujours par la friction, jamais par le manque de précision.
  */
 
+/*
+ * Diète version 2 (« sans thon en boîte ») : journée du mardi de la semaine A,
+ * un jour de salle, repas pour repas — 187 g de protéines. Plus aucun produit
+ * de la mer, hors thiof occasionnel ; horaires recalés sur la séance de 22h.
+ */
 const TEMPLATE = [
   {
     slot: "petit_dejeuner" as const,
     time: "07h00",
     title: "Petit-déjeuner",
-    content: "3 œufs + 1/4 de tapalapa + café ou thé sans sucre",
-    proteinG: 22,
+    content: "Omelette 4 œufs + 2 tranches de pain complet",
+    proteinG: 30,
     items: [
-      { slug: "oeuf", portions: 3 },
-      { slug: "tapalapa", portions: 1 },
+      { slug: "oeuf", portions: 4 },
+      { slug: "pain-complet", portions: 1 },
     ],
   },
   {
     slot: "collation_matin" as const,
     time: "11h00",
     title: "Collation",
-    content: "250 ml de lait caillé nature + 1 fruit",
+    content: "250 ml de lait caillé nature + 1 orange",
     proteinG: 9,
     items: [{ slug: "lait-caille", portions: 1 }],
   },
@@ -38,42 +43,47 @@ const TEMPLATE = [
     slot: "dejeuner" as const,
     time: "14h00",
     title: "Déjeuner",
-    content: "1 poing de riz, double portion de poisson, légumes à volonté, huile réduite",
-    proteinG: 35,
+    content: "Salade poulet-niébé : 150 g de poulet + 1 bol de niébé + crudités + citron",
+    proteinG: 52,
     items: [
-      { slug: "yaboy", portions: 1.5 },
-      { slug: "riz-cuit", portions: 1 },
+      { slug: "poulet", portions: 1.5 },
+      { slug: "niebe", portions: 0.5 },
     ],
+    emphasis: "La formule du midi : la protéine d'abord, crudités à volonté, 1 poing de féculent.",
   },
   {
     slot: "collation_apres_midi" as const,
     time: "17h30",
     title: "Collation",
-    content: "2 œufs durs, ou une poignée d'arachides (30 g), ou 1 boîte de thon",
-    proteinG: 15,
-    items: [{ slug: "oeuf", portions: 2 }],
+    content: "2 œufs durs + 1 poignée d'arachides (30 g) — ou 3 œufs durs + 250 ml de lait caillé",
+    proteinG: 19,
+    items: [
+      { slug: "oeuf", portions: 2 },
+      { slug: "arachides", portions: 1 },
+    ],
+    emphasis: "Fais cuire tes œufs durs par lot de 6 à 8 la veille : c'est cette collation qui saute en premier.",
   },
   {
     slot: "diner" as const,
-    time: "20h00",
+    time: "19h00",
     title: "Dîner",
-    content: "Poisson ou poulet + thiéré ou patate douce + légumes",
-    proteinG: 35,
+    content: "Poulet grillé + thiéré (couscous de mil) + salade",
+    proteinG: 45,
     items: [
-      { slug: "maquereau", portions: 1.5 },
+      { slug: "poulet", portions: 1.5 },
       { slug: "thiere", portions: 1 },
     ],
-    emphasis: "Complet, glucides inclus, 2 à 3 h avant la séance. Le sauter, c'est perdre sa force.",
+    emphasis: "Repas complet, glucides compris : 3 h avant la séance de 22h.",
   },
   {
     slot: "post_seance" as const,
-    time: "00h15",
+    time: "23h15",
     title: "Post-séance",
-    content: "Léger et protéiné : lait caillé + 2 œufs, ou 1 boîte de thon, ou un shaker",
-    proteinG: 25,
+    content: "Shaker whey + lait caillé",
+    proteinG: 32,
     items: [
+      { slug: "whey", portions: 1 },
       { slug: "lait-caille", portions: 1 },
-      { slug: "oeuf", portions: 2 },
     ],
     emphasis: "Léger. Un gros repas à cette heure dégrade le sommeil.",
   },

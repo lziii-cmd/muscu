@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Configuration locale de lancement
 .claude/
+
+# Charges habituelles saisies à la main : données personnelles.
+/MES-CHARGES.md

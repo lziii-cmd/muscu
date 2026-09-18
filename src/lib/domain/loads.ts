@@ -80,10 +80,14 @@ export function parseWeight(raw: string): number | null {
  * Le matériel de l'exercice décide ; à défaut, son nom.
  */
 export function barOrMachine(name: string, equipment: string | null): "barre" | "machine" {
+  const n = name.toLowerCase();
+  // Le premier mot décide quand il nomme la barre : « Barre au front ou
+  // kickback poulie » se fait d'abord à la barre, malgré la poulie proposée.
+  if (/^barre\b/.test(n)) return "barre";
   if (equipment === "barre") return "barre";
   if (equipment === "machine" || equipment === "poulie") return "machine";
-  const n = name.toLowerCase();
-  if (/machine|poulie|presse|pec-deck|leg (curl|extension)|tirage/.test(n)) return "machine";
+  // Mollets et mouvements « aux haltères » chargés en kilos : c'est la machine.
+  if (/machine|poulie|presse|pec-deck|leg (curl|extension)|tirage|mollets|halt[eè]re/.test(n)) return "machine";
   return "barre";
 }
 

@@ -218,7 +218,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
           and(eq(schema.exerciseLoads.userId, userId), inArray(schema.exerciseLoads.exerciseId, exerciseIds)),
         )
     : [];
-  const habitual = new Map<number, AdaptedLoad>(
+  const habitual = new Map<number, AdaptedLoad & { asOf: string }>(
     habitualRows.map((row) => [
       row.exerciseId,
       {
@@ -227,6 +227,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
         weightUnit: row.weightUnit as WeightUnit,
         repsTarget: null,
         reason: "Ta charge habituelle",
+        asOf: String(row.asOf),
       },
     ]),
   );
@@ -270,7 +271,15 @@ export async function getDay(date: string): Promise<DaySession[]> {
 
   const adapted = (e: (typeof prescribedExercises)[number]): AdaptedLoad | null => {
     const last = lastByExercise.get(e.exerciseId);
-    if (!last) return habitual.get(e.exerciseId) ?? null;
+    const usual = habitual.get(e.exerciseId);
+    // La plus récente des deux fait foi : une charge inscrite dans le tableau
+    // après une séance la remplace, une séance faite ensuite la remplace à son tour.
+    if (!last || (usual && usual.asOf > String(last.date))) {
+      if (!usual) return null;
+      const { asOf: _asOf, ...load } = usual;
+      void _asOf;
+      return load;
+    }
     // L'ancien type « barre / machine » est ramené à l'un des deux.
     const loadUnit =
       last.loadUnit === "barre_machine" ? barOrMachine(e.name, e.equipment) : (last.loadUnit as LoadUnit);

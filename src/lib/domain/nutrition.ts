@@ -72,7 +72,7 @@ export function proteinProgress(consumedG: number, target: ProteinTarget): Prote
     message:
       status === "atteint"
         ? `Objectif atteint (${consumedG} g).`
-        : `Il te manque ${remainingG} g — soit ${Math.ceil(remainingG / 6)} œufs ou ${Math.ceil(remainingG / 21)} portions de yaboy.`,
+        : `Il te manque ${remainingG} g — soit ${Math.ceil(remainingG / 6)} œufs ou ${Math.ceil((remainingG / 27) * 100)} g de poulet.`,
   };
 }
 

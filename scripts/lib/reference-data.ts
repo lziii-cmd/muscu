@@ -150,6 +150,45 @@ export const FOODS: FoodSeed[] = [
     priceFcfa: null,
     note: "Pratique pour le post-séance de minuit. Pas indispensable.",
   },
+  // Diète version 2. Le catalogue est partagé entre les comptes : on ajoute ce
+  // qui manquait, on ne retire rien — le thon et le yaboy sortent de la journée
+  // type d'Abdou, pas des repas que d'autres ont pu saisir.
+  {
+    slug: "pain-complet",
+    name: "Pain complet",
+    portionLabel: "2 tranches (60 g)",
+    proteinG: 5,
+    kcal: 150,
+    priceFcfa: null,
+    note: "~9 g de protéines / 100 g : il accompagne, il ne porte pas le repas.",
+  },
+  {
+    slug: "boeuf-maigre",
+    name: "Bœuf maigre",
+    portionLabel: "100 g",
+    proteinG: 26,
+    kcal: 180,
+    priceFcfa: 400,
+    note: "2 fois par semaine.",
+  },
+  {
+    slug: "foie-boeuf",
+    name: "Foie de bœuf",
+    portionLabel: "100 g",
+    proteinG: 20,
+    kcal: 135,
+    priceFcfa: 250,
+    note: "Riche en fer, 1 fois par semaine.",
+  },
+  {
+    slug: "thiof",
+    name: "Thiof",
+    portionLabel: "100 g",
+    proteinG: 20,
+    kcal: 100,
+    priceFcfa: null,
+    note: "Seul produit de la mer gardé, occasionnel.",
+  },
 ];
 
 /** Journée type d'un jour de salle, du document de diète. */
