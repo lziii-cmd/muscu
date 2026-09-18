@@ -5,7 +5,6 @@ import {
   adherence,
   adherenceBySlot,
   lateLogging,
-  loggingQuality,
   missPatterns,
   streaks,
   MISSED_REASON_LABELS,
@@ -62,7 +61,6 @@ export default async function JournalPage() {
   const bySlot = adherenceBySlot(sessionRecords);
   const patterns = missPatterns(sessionRecords);
   const streak = streaks(sessionRecords, today());
-  const logging = loggingQuality(sessionRecords);
 
   // Une case par jour du programme, avec l'état de ses créneaux.
   const days = new Map<
@@ -144,17 +142,6 @@ export default async function JournalPage() {
             label="Séances à la maison"
             value={homeCount}
             hint="comptent pour l'assiduité"
-          />
-        </Card>
-      </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card>
-          <Stat
-            label="Saisies en retard"
-            value={logging.latePercent}
-            unit="%"
-            tone={logging.drifting ? "warning" : "neutral"}
           />
         </Card>
       </div>
@@ -283,7 +270,7 @@ export default async function JournalPage() {
       </div>
 
       <Card className="mt-4">
-        <CardTitle hint="Les séances saisies après coup sont signalées : les charges notées de mémoire sont moins fiables.">
+        <CardTitle hint="Les séances saisies après coup portent la date de leur saisie ; leurs charges comptent comme les autres.">
           Dernières séances enregistrées
         </CardTitle>
 
@@ -325,7 +312,7 @@ export default async function JournalPage() {
                     "maison" ? (
                       <Badge tone="soir">maison</Badge>
                     ) : null}
-                    {late.isLate ? <Badge tone="warning">{late.label}</Badge> : null}
+                    {late.isLate ? <Badge>{late.label}</Badge> : null}
                   </li>
                 );
               })}

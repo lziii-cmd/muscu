@@ -1,7 +1,9 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, lte, max, min, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, lte, max, min, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
 import { currentUserId } from "@/lib/auth/current-user";
+import { adaptFromLast, barOrMachine, type AdaptedLoad, type LoadUnit, type WeightUnit } from "@/lib/domain/loads";
+import { bodyPartOf } from "@/lib/domain/progression";
 import type { Slot } from "@/lib/utils";
 
 /*
@@ -51,7 +53,15 @@ export interface PrescribedExercise {
    * finition « les bons jours ».
    */
   optional: boolean;
+  /**
+   * Charge à proposer aujourd'hui : tirée de la dernière séance en salle par la
+   * double progression, à défaut la charge habituelle importée. Null tant que
+   * rien n'a été enregistré ni importé ; le programme fait alors foi.
+   */
+  habitual: AdaptedLoad | null;
 }
+
+
 
 export interface LoggedExercise {
   id: number;
@@ -62,6 +72,7 @@ export interface LoggedExercise {
   skipReason: string | null;
   weightKg: number | null;
   loadUnit: string | null;
+  weightUnit: "kg" | "lb";
   machineNote: string | null;
   setsDone: number | null;
   repsDone: number | null;
@@ -181,6 +192,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
           skipReason: schema.sessionExercises.skipReason,
           weightKg: schema.sessionExercises.weightKg,
           loadUnit: schema.sessionExercises.loadUnit,
+          weightUnit: schema.sessionExercises.weightUnit,
           machineNote: schema.sessionExercises.machineNote,
           setsDone: schema.sessionExercises.setsDone,
           repsDone: schema.sessionExercises.repsDone,
@@ -196,6 +208,85 @@ export async function getDay(date: string): Promise<DaySession[]> {
         .where(inArray(schema.sessionExercises.sessionId, loggedIds))
         .orderBy(asc(schema.sessionExercises.orderIndex))
     : [];
+
+  const exerciseIds = [...new Set(prescribedExercises.map((e) => e.exerciseId))];
+  const habitualRows = exerciseIds.length
+    ? await db
+        .select()
+        .from(schema.exerciseLoads)
+        .where(
+          and(eq(schema.exerciseLoads.userId, userId), inArray(schema.exerciseLoads.exerciseId, exerciseIds)),
+        )
+    : [];
+  const habitual = new Map<number, AdaptedLoad>(
+    habitualRows.map((row) => [
+      row.exerciseId,
+      {
+        loadUnit: row.loadUnit as LoadUnit,
+        weightKg: toNumber(row.weightKg),
+        weightUnit: row.weightUnit as WeightUnit,
+        repsTarget: null,
+        reason: "Ta charge habituelle",
+      },
+    ]),
+  );
+
+  /*
+   * Dernière séance en salle de chaque exercice, avant ce jour. C'est elle qui
+   * rend le programme vivant : la charge proposée suit ce qui a été soulevé,
+   * et la double progression décide s'il faut monter. Les séances à la maison
+   * n'y entrent pas — le programme dit que les deux échelles ne se comparent pas.
+   */
+  const performed = exerciseIds.length
+    ? await db
+        .select({
+          exerciseId: schema.sessionExercises.exerciseId,
+          date: schema.sessions.date,
+          weightKg: schema.sessionExercises.weightKg,
+          loadUnit: schema.sessionExercises.loadUnit,
+          weightUnit: schema.sessionExercises.weightUnit,
+          setsDone: schema.sessionExercises.setsDone,
+          repsDone: schema.sessionExercises.repsDone,
+        })
+        .from(schema.sessionExercises)
+        .innerJoin(schema.sessions, eq(schema.sessions.id, schema.sessionExercises.sessionId))
+        .where(
+          and(
+            eq(schema.sessions.userId, userId),
+            eq(schema.sessions.location, "salle"),
+            eq(schema.sessionExercises.done, true),
+            lt(schema.sessions.date, date),
+            inArray(schema.sessionExercises.exerciseId, exerciseIds),
+          ),
+        )
+        .orderBy(desc(schema.sessions.date))
+    : [];
+  const lastByExercise = new Map<number, (typeof performed)[number]>();
+  for (const row of performed) {
+    if (row.loadUnit === null) continue;
+    if (row.loadUnit !== "poids_du_corps" && row.weightKg === null) continue;
+    if (!lastByExercise.has(row.exerciseId)) lastByExercise.set(row.exerciseId, row);
+  }
+
+  const adapted = (e: (typeof prescribedExercises)[number]): AdaptedLoad | null => {
+    const last = lastByExercise.get(e.exerciseId);
+    if (!last) return habitual.get(e.exerciseId) ?? null;
+    // L'ancien type « barre / machine » est ramené à l'un des deux.
+    const loadUnit =
+      last.loadUnit === "barre_machine" ? barOrMachine(e.name, e.equipment) : (last.loadUnit as LoadUnit);
+    return adaptFromLast(
+      {
+        date: String(last.date),
+        loadUnit,
+        weightKg: toNumber(last.weightKg),
+        weightUnit: last.weightUnit as WeightUnit,
+        sets: last.setsDone,
+        reps: last.repsDone,
+      },
+      e.repsLow !== null && e.repsHigh !== null ? { low: e.repsLow, high: e.repsHigh } : null,
+      bodyPartOf(e.muscleGroup),
+    );
+  };
 
   const mapped = prescribedSessions.map((session) => {
     const logged = loggedSessions.find((l) => l.slot === session.slot) ?? null;
@@ -215,6 +306,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
           loadKg: toNumber(e.loadKg),
           dumbbellKg: toNumber(e.dumbbellKg),
           unit: e.unit as "reps" | "seconds",
+          habitual: adapted(e),
         })),
       logged: logged
         ? {
@@ -241,6 +333,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
                 skipReason: e.skipReason,
                 weightKg: toNumber(e.weightKg),
                 loadUnit: e.loadUnit,
+                weightUnit: e.weightUnit as "kg" | "lb",
                 machineNote: e.machineNote,
                 setsDone: e.setsDone,
                 repsDone: e.repsDone,
@@ -295,6 +388,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
             skipReason: e.skipReason,
             weightKg: toNumber(e.weightKg),
             loadUnit: e.loadUnit,
+            weightUnit: e.weightUnit as "kg" | "lb",
             machineNote: e.machineNote,
             setsDone: e.setsDone,
             repsDone: e.repsDone,

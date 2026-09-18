@@ -159,7 +159,9 @@ describe("loggingQuality", () => {
       record({ date: "2026-09-04", loggedAt: "2026-09-04T22:00:00Z" }),
     ]);
     expect(quality.drifting).toBe(true);
-    expect(quality.message).toMatch(/mémoire/i);
+    expect(quality.message).toMatch(/chrono/i);
+    // Une saisie après coup ne rend pas les charges douteuses.
+    expect(quality.message).not.toMatch(/fiable|mémoire/i);
   });
 
   it("gère l'absence de séances enregistrées", () => {

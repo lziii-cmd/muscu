@@ -17,11 +17,23 @@ import {
 import { RestTimer } from "./rest-timer";
 import { ExercisePicker, type ExerciseOption } from "./exercise-picker";
 import { Badge, Card } from "@/components/ui";
-import { cn, formatDuration, formatKg, formatSeconds, SLOT_LABELS, type Slot } from "@/lib/utils";
+import { cn, formatDuration, formatSeconds, SLOT_LABELS, type Slot } from "@/lib/utils";
 import { clearDraft, enqueue, flushOutbox, readDraft, saveDraft } from "@/lib/local/db";
 import { advanceDoubleProgression, bodyPartOf } from "@/lib/domain/progression";
 import { repsForMax } from "@/lib/domain/calisthenics";
 import { MISSED_REASON_LABELS, lateLogging, type MissedReason } from "@/lib/domain/adherence";
+import {
+  barOrMachine,
+  formatLoad,
+  fromKg,
+  LOAD_UNIT_CHOICES,
+  parseWeight,
+  suggestLoad,
+  toKg,
+  type AdaptedLoad,
+  type LoadUnit,
+  type WeightUnit,
+} from "@/lib/domain/loads";
 
 /*
  * Écran de saisie d'une séance.
@@ -67,6 +79,8 @@ export interface PrescribedExercise {
    * échec.
    */
   optional: boolean;
+  /** Charge proposée d'après la dernière séance, et pourquoi. */
+  habitual?: AdaptedLoad | null;
 }
 
 export interface SessionData {
@@ -96,6 +110,7 @@ export interface SessionData {
       done: boolean;
       weightKg: number | null;
       loadUnit: string | null;
+      weightUnit?: WeightUnit;
       setsDone: number | null;
       repsDone: number | null;
       holdSecondsDone: number | null;
@@ -108,7 +123,6 @@ export interface SessionData {
   } | null;
 }
 
-type LoadUnit = "barre_machine" | "kg_par_haltere" | "poids_du_corps";
 
 /**
  * Ligne ajoutée à la séance en dehors du programme : entraînement
@@ -125,6 +139,8 @@ interface ExtraLine {
   done: boolean;
   weightKg: string;
   loadUnit: LoadUnit;
+  /** Unité du nombre saisi dans `weightKg` (le nom du champ est historique). */
+  weightUnit: WeightUnit;
   setsDone: string;
   repsDone: string;
   restSeconds: string;
@@ -134,6 +150,13 @@ interface EntryState {
   done: boolean;
   weightKg: string;
   loadUnit: LoadUnit;
+  /** Unité du nombre saisi dans `weightKg` (le nom du champ est historique). */
+  weightUnit: WeightUnit;
+  /**
+   * Séries validées d'un toucher sur l'icône. Facultatif : un brouillon écrit
+   * avant son introduction ne le porte pas, il se déduit alors de `done`.
+   */
+  setsCompleted?: number;
   setsDone: string;
   repsDone: string;
   holdSecondsDone: string;
@@ -141,31 +164,55 @@ interface EntryState {
   skipReason: string;
 }
 
+/** Nombre de séries à valider : celui du programme, à défaut celui saisi. */
+function targetSets(exercise: PrescribedExercise, typed?: string | number | null): number {
+  return Math.max(1, exercise.sets ?? (Number(typed) || 1));
+}
+
+/** Séries déjà validées, y compris pour un brouillon antérieur au décompte par série. */
+function completedSets(entry: EntryState, target: number): number {
+  return Math.min(target, entry.setsCompleted ?? (entry.done ? target : 0));
+}
+
 function initialEntry(exercise: PrescribedExercise, logged?: SessionData["logged"]): EntryState {
   const previous = logged?.exercises.find((e) => e.programExerciseId === exercise.id);
 
-  // La charge proposée vient d'abord de ce qui a déjà été saisi, sinon du
-  // programme : les kg du tableau sont un point de départ, pas une consigne.
-  const suggestedUnit: LoadUnit =
-    exercise.loadKg !== null
-      ? "barre_machine"
-      : exercise.dumbbellKg !== null
-        ? "kg_par_haltere"
-        : "poids_du_corps";
-
-  const suggestedWeight = exercise.loadKg ?? exercise.dumbbellKg ?? null;
+  // La charge proposée vient d'abord de ce qui a déjà été saisi, puis de la
+  // charge habituelle, puis du programme : les kg du tableau sont un point de
+  // départ, pas une consigne. L'ancien type « barre_machine » est ramené à
+  // barre ou machine selon l'exercice.
+  const previousUnit: LoadUnit | null = !previous?.loadUnit
+    ? null
+    : previous.loadUnit === "barre_machine"
+      ? barOrMachine(exercise.name, exercise.equipment)
+      : (previous.loadUnit as LoadUnit);
+  const previousWeightUnit: WeightUnit = previous?.weightUnit ?? "kg";
+  const load =
+    previousUnit === null
+      ? suggestLoad(exercise)
+      : previous?.weightKg != null
+        ? {
+            loadUnit: previousUnit,
+            weight: String(fromKg(previous.weightKg, previousWeightUnit)),
+            weightUnit: previousWeightUnit,
+          }
+        : suggestLoad(exercise, previousUnit);
 
   return {
     done: previous?.done ?? false,
-    weightKg:
-      previous?.weightKg !== null && previous?.weightKg !== undefined
-        ? String(previous.weightKg)
-        : suggestedWeight !== null
-          ? String(suggestedWeight)
-          : "",
-    loadUnit: (previous?.loadUnit as LoadUnit) ?? suggestedUnit,
+    setsCompleted: previous?.done ? targetSets(exercise, previous.setsDone) : 0,
+    weightKg: load.weight,
+    loadUnit: load.loadUnit,
+    weightUnit: load.weightUnit,
     setsDone: previous?.setsDone != null ? String(previous.setsDone) : exercise.sets != null ? String(exercise.sets) : "",
-    repsDone: previous?.repsDone != null ? String(previous.repsDone) : exercise.repsLow != null ? String(exercise.repsLow) : "",
+    repsDone:
+      previous?.repsDone != null
+        ? String(previous.repsDone)
+        : exercise.habitual?.repsTarget != null
+          ? String(exercise.habitual.repsTarget)
+          : exercise.repsLow != null
+            ? String(exercise.repsLow)
+            : "",
     holdSecondsDone:
       previous?.holdSecondsDone != null
         ? String(previous.holdSecondsDone)
@@ -265,8 +312,9 @@ export function SessionScreen({
         unit: "reps" as const,
         replacesLabel: null,
         done: entry.done,
-        weightKg: entry.weightKg === null ? "" : String(entry.weightKg),
+        weightKg: entry.weightKg === null ? "" : String(fromKg(entry.weightKg, entry.weightUnit ?? "kg")),
         loadUnit: (entry.loadUnit as LoadUnit) ?? "poids_du_corps",
+        weightUnit: entry.weightUnit ?? "kg",
         setsDone: entry.setsDone === null ? "" : String(entry.setsDone),
         repsDone: entry.repsDone === null ? "" : String(entry.repsDone),
         restSeconds: "",
@@ -383,25 +431,60 @@ export function SessionScreen({
 
   const update = (id: number, patch: Partial<EntryState>) => {
     touched.current = true;
-    setEntries((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
+    setEntries((current) => {
+      const next = { ...current[id], ...patch };
+      // Changer de type change la charge proposée : 30 kg à la barre ne font
+      // pas 30 kg par haltère. On reprend l'habitude de ce type, sinon le
+      // programme — jamais le nombre d'avant.
+      if (patch.loadUnit && patch.loadUnit !== current[id].loadUnit) {
+        const exercise = session.prescribed.find((e) => e.id === id);
+        if (exercise) {
+          const suggestion = suggestLoad(exercise, patch.loadUnit);
+          next.weightKg = suggestion.weight;
+          next.weightUnit = suggestion.weightUnit;
+        }
+      }
+      return { ...current, [id]: next };
+    });
   };
 
-  const toggleDone = (exercise: PrescribedExercise) => {
+  /**
+   * Un toucher = une série. L'icône se remplit série après série ; pleine,
+   * l'exercice est fait. Toucher une icône déjà pleine la vide : c'est la
+   * correction d'une fausse manœuvre, pas un geste courant.
+   */
+  const tapSet = (exercise: PrescribedExercise) => {
     const entry = entries[exercise.id];
-    const nextDone = !entry.done;
-    update(exercise.id, { done: nextDone, skipReason: nextDone ? "" : entry.skipReason });
+    const target = targetSets(exercise, entry.setsDone);
+    const completed = completedSets(entry, target);
 
-    if (!running && nextDone) setRunning(true);
+    if (completed >= target) {
+      update(exercise.id, { setsCompleted: 0, done: false, setsDone: String(target) });
+      setRest(null);
+      return;
+    }
 
-    // Le repos démarre à la validation, avec le temps prescrit. Un superset
-    // s'enchaîne sans repos : seul le second mouvement en déclenche un.
-    if (nextDone && exercise.restSeconds !== null && exercise.restSeconds > 0) {
+    const next = completed + 1;
+    const full = next >= target;
+    update(exercise.id, {
+      setsCompleted: next,
+      setsDone: String(next),
+      done: full,
+      skipReason: full ? "" : entry.skipReason,
+    });
+
+    if (!running) setRunning(true);
+
+    // Le repos démarre à chaque série validée, avec le temps prescrit : c'est
+    // le repos ENTRE les séries. Le premier mouvement d'un superset s'enchaîne
+    // sans repos (0 s au programme) ; le repos vient après le second.
+    if (exercise.restSeconds !== null && exercise.restSeconds > 0) {
       // Compteur monotone plutôt qu'horodatage : lire l'horloge depuis le corps
       // du composant est un effet de bord, et un simple incrément suffit à
       // remonter le chronomètre.
       setRest((previous) => ({
         seconds: exercise.restSeconds!,
-        label: exercise.name,
+        label: full ? `${exercise.name} — terminé, exercice suivant` : `${exercise.name} — série ${next + 1}/${target} ensuite`,
         key: (previous?.key ?? 0) + 1,
       }));
     }
@@ -429,6 +512,7 @@ export function SessionScreen({
         done: false,
         weightKg: "",
         loadUnit: "poids_du_corps",
+        weightUnit: "kg",
         setsDone: "3",
         repsDone: "",
         restSeconds: "",
@@ -482,7 +566,8 @@ export function SessionScreen({
         const entry = entries[exercise.id];
         const sets = Math.max(1, Number(entry.setsDone) || exercise.sets || 1);
         const reps = Number(entry.repsDone);
-        const weight = entry.weightKg === "" ? null : Number(entry.weightKg.replace(",", "."));
+        const typed = parseWeight(entry.weightKg);
+        const weight = typed === null ? null : toKg(typed, entry.weightUnit ?? "kg");
 
         const advice = advanceDoubleProgression(
           Array.from({ length: sets }, () => ({ reps, weightKg: weight })),
@@ -512,17 +597,21 @@ export function SessionScreen({
         exercises: [
           ...session.prescribed.map((exercise) => {
           const entry = entries[exercise.id];
-          const weight = entry.weightKg === "" ? null : Number(entry.weightKg.replace(",", "."));
+          const typed = parseWeight(entry.weightKg);
           return {
             programExerciseId: exercise.id,
             exerciseId: exercise.exerciseId,
             orderIndex: exercise.orderIndex,
             orderLabel: exercise.orderLabel,
-            done: entry.done,
+            // Des séries validées sont du travail réel, même si l'exercice n'a
+            // pas été mené au bout : elles comptent, avec leur nombre exact.
+            done: entry.done || (entry.setsCompleted ?? 0) > 0,
             isExtra: false,
             skipReason: entry.done || entry.skipReason === "" ? null : entry.skipReason,
-            weightKg: entry.loadUnit === "poids_du_corps" ? null : Number.isFinite(weight) ? weight : null,
+            weightKg:
+              entry.loadUnit === "poids_du_corps" || typed === null ? null : toKg(typed, entry.weightUnit ?? "kg"),
             loadUnit: entry.loadUnit,
+            weightUnit: entry.weightUnit ?? "kg",
             machineNote: entry.machineNote.trim() === "" ? null : entry.machineNote.trim(),
             setsDone: entry.setsDone === "" ? null : Number(entry.setsDone),
             repsDone: entry.repsDone === "" ? null : Number(entry.repsDone),
@@ -534,7 +623,7 @@ export function SessionScreen({
           // exercice indisponible. Elles portent `isExtra` pour ne pas être
           // comparées à une prescription qui n'existe pas.
           ...extras.map((extra, index) => {
-            const weight = extra.weightKg === "" ? null : Number(extra.weightKg.replace(",", "."));
+            const typed = parseWeight(extra.weightKg);
             return {
               programExerciseId: null,
               exerciseId: extra.exerciseId,
@@ -544,8 +633,9 @@ export function SessionScreen({
               isExtra: true,
               skipReason: null,
               weightKg:
-                extra.loadUnit === "poids_du_corps" || !Number.isFinite(weight) ? null : weight,
+                extra.loadUnit === "poids_du_corps" || typed === null ? null : toKg(typed, extra.weightUnit ?? "kg"),
               loadUnit: extra.loadUnit,
+              weightUnit: extra.weightUnit ?? "kg",
               machineNote: null,
               setsDone: extra.setsDone === "" ? null : Number(extra.setsDone),
               repsDone: extra.repsDone === "" ? null : Number(extra.repsDone),
@@ -684,7 +774,7 @@ export function SessionScreen({
             )}
             {late.isLate ? (
               <p className="mt-2">
-                <Badge tone="warning">{late.label}</Badge>
+                <Badge>{late.label}</Badge>
               </p>
             ) : null}
             <button
@@ -725,8 +815,8 @@ export function SessionScreen({
           {session.weekNumber ? <Badge>S{session.weekNumber}</Badge> : null}
 
           {isPast ? (
-            <Badge tone="warning">
-              <History size={12} aria-hidden /> Saisie en retard
+            <Badge>
+              <History size={12} aria-hidden /> Saisie après coup
             </Badge>
           ) : null}
 
@@ -819,20 +909,13 @@ export function SessionScreen({
                       </div>
                     ) : null}
                     <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        onClick={() => toggleDone(exercise)}
-                        aria-pressed={entry.done}
-                        aria-label={`${exercise.name} : ${entry.done ? "fait" : "à faire"}`}
-                        className={cn(
-                          "tap mt-0.5 grid size-11 shrink-0 place-items-center rounded-xl border-2 transition-colors",
-                          entry.done
-                            ? "border-success bg-success/20 text-success"
-                            : "border-border-strong text-faint",
-                        )}
-                      >
-                        {entry.done ? <Check size={22} /> : <span className="text-xs">{exercise.orderLabel}</span>}
-                      </button>
+                      <SetProgressButton
+                        label={exercise.orderLabel}
+                        name={exercise.name}
+                        completed={completedSets(entry, targetSets(exercise, entry.setsDone))}
+                        target={targetSets(exercise, entry.setsDone)}
+                        onTap={() => tapSet(exercise)}
+                      />
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline gap-x-2">
@@ -840,6 +923,15 @@ export function SessionScreen({
                             {exercise.name}
                           </span>
                           {isSuperset ? <Badge tone="accent">superset {exercise.supersetGroup}</Badge> : null}
+                          {(() => {
+                            const target = targetSets(exercise, entry.setsDone);
+                            const completed = completedSets(entry, target);
+                            return completed > 0 && completed < target ? (
+                              <span className="text-xs tabular-nums text-accent">
+                                série {completed}/{target}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
 
                         {location === "maison" ? (
@@ -861,6 +953,10 @@ export function SessionScreen({
                           </p>
                         )}
 
+                        {location === "salle" && exercise.habitual?.reason ? (
+                          <p className="mt-0.5 text-xs text-accent">{exercise.habitual.reason}</p>
+                        ) : null}
+
                         {location === "salle" && exercise.homeAlternative ? (
                           <p className="mt-0.5 text-xs text-faint">
                             Maison : {exercise.homeAlternative}
@@ -877,25 +973,23 @@ export function SessionScreen({
                                 onChange={(event) =>
                                   update(exercise.id, { weightKg: event.target.value })
                                 }
-                                placeholder="kg"
+                                placeholder={entry.weightUnit ?? "kg"}
                                 className="tap w-20 rounded-lg border border-border bg-raised px-2 text-center text-base tabular-nums outline-none focus:border-accent"
                               />
-                              <span className="text-sm text-faint">kg</span>
+                              <WeightUnitToggle
+                                unit={entry.weightUnit ?? "kg"}
+                                onChange={(weightUnit) => update(exercise.id, { weightUnit })}
+                                label={exercise.name}
+                              />
+                              <LoadHint weight={entry.weightKg} loadUnit={entry.loadUnit} weightUnit={entry.weightUnit ?? "kg"} />
                             </label>
                           ) : null}
 
-                          <select
+                          <LoadUnitSelect
                             value={entry.loadUnit}
-                            onChange={(event) =>
-                              update(exercise.id, { loadUnit: event.target.value as LoadUnit })
-                            }
-                            aria-label={`Type de charge pour ${exercise.name}`}
-                            className="tap rounded-lg border border-border bg-raised px-2 text-sm text-muted outline-none focus:border-accent"
-                          >
-                            <option value="barre_machine">barre / machine</option>
-                            <option value="kg_par_haltere">par haltère</option>
-                            <option value="poids_du_corps">poids du corps</option>
-                          </select>
+                            onChange={(loadUnit) => update(exercise.id, { loadUnit })}
+                            label={exercise.name}
+                          />
 
                           <button
                             type="button"
@@ -1082,25 +1176,23 @@ export function SessionScreen({
                                 onChange={(event) =>
                                   updateExtra(extra.key, { weightKg: event.target.value })
                                 }
-                                placeholder="kg"
+                                placeholder={extra.weightUnit ?? "kg"}
                                 className="tap w-20 rounded-lg border border-border bg-raised px-2 text-center tabular-nums outline-none focus:border-accent"
                               />
-                              <span className="text-sm text-faint">kg</span>
+                              <WeightUnitToggle
+                                unit={extra.weightUnit ?? "kg"}
+                                onChange={(weightUnit) => updateExtra(extra.key, { weightUnit })}
+                                label={extra.name}
+                              />
+                              <LoadHint weight={extra.weightKg} loadUnit={extra.loadUnit} weightUnit={extra.weightUnit ?? "kg"} />
                             </label>
                           ) : null}
 
-                          <select
+                          <LoadUnitSelect
                             value={extra.loadUnit}
-                            onChange={(event) =>
-                              updateExtra(extra.key, { loadUnit: event.target.value as LoadUnit })
-                            }
-                            aria-label={`Type de charge pour ${extra.name}`}
-                            className="tap rounded-lg border border-border bg-raised px-2 text-sm text-muted outline-none focus:border-accent"
-                          >
-                            <option value="poids_du_corps">poids du corps</option>
-                            <option value="barre_machine">barre / machine</option>
-                            <option value="kg_par_haltere">par haltère</option>
-                          </select>
+                            onChange={(loadUnit) => updateExtra(extra.key, { loadUnit })}
+                            label={extra.name}
+                          />
 
                           <button
                             type="button"
@@ -1317,11 +1409,7 @@ function Summary({
                 {exercise.name}
               </span>
               <span className="shrink-0 tabular-nums text-muted">
-                {entry.loadUnit === "poids_du_corps"
-                  ? "PDC"
-                  : entry.weightKg
-                    ? formatKg(Number(entry.weightKg.replace(",", ".")))
-                    : "—"}
+                {formatLoad(parseWeight(entry.weightKg), entry.loadUnit, entry.weightUnit ?? "kg")}
               </span>
             </li>
           );
@@ -1380,11 +1468,11 @@ function Summary({
       ) : null}
 
       {late ? (
-        <div className="mb-4 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/5 p-3 text-sm">
-          <History size={16} className="mt-0.5 shrink-0 text-warning" aria-hidden />
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-border bg-raised p-3 text-sm">
+          <History size={16} className="mt-0.5 shrink-0 text-faint" aria-hidden />
           <p className="text-muted">
-            Cette séance sera marquée <strong className="text-warning">enregistrée avec du retard</strong>.
-            Sa durée et ses temps de repos ne seront pas comptés dans les analyses : ils n'ont pas été mesurés.
+            Séance saisie après coup : tes charges et tes répétitions comptent normalement. Seules la
+            durée et les pauses, qui n'ont pas été chronométrées, restent hors des analyses de temps.
           </p>
         </div>
       ) : null}
@@ -1441,5 +1529,126 @@ function Summary({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Bascule kg / lb. Elle ne convertit pas le nombre : elle dit dans quelle
+ * unité il a été lu. Sur une machine graduée en livres, on tape ce qu'on lit,
+ * on touche « lb », et l'application convertit en kilos à l'enregistrement.
+ */
+function WeightUnitToggle({
+  unit,
+  onChange,
+  label,
+}: {
+  unit: WeightUnit;
+  onChange: (unit: WeightUnit) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(unit === "kg" ? "lb" : "kg")}
+      aria-label={`Unité de la charge pour ${label} : ${unit === "kg" ? "kilos" : "livres"}. Toucher pour changer.`}
+      className="tap min-w-11 rounded-lg border border-border bg-raised px-2 text-sm font-medium tabular-nums text-muted outline-none focus:border-accent"
+    >
+      {unit}
+    </button>
+  );
+}
+
+/** « par haltère » pour les haltères, et l'équivalent en kilos d'une saisie en livres. */
+function LoadHint({ weight, loadUnit, weightUnit }: { weight: string; loadUnit: LoadUnit; weightUnit: WeightUnit }) {
+  const typed = parseWeight(weight);
+  const parts: string[] = [];
+  if (loadUnit === "kg_par_haltere") parts.push("par haltère");
+  if (weightUnit === "lb" && typed !== null) parts.push(`≈ ${String(fromKg(toKg(typed, "lb"), "kg")).replace(".", ",")} kg`);
+  if (parts.length === 0) return null;
+  return <span className="text-xs text-faint">{parts.join(" · ")}</span>;
+}
+
+/** Type de charge. L'ancien « barre / machine » n'est montré que s'il est déjà enregistré. */
+function LoadUnitSelect({
+  value,
+  onChange,
+  label,
+}: {
+  value: LoadUnit;
+  onChange: (unit: LoadUnit) => void;
+  label: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value as LoadUnit)}
+      aria-label={`Type de charge pour ${label}`}
+      className="tap rounded-lg border border-border bg-raised px-2 text-sm text-muted outline-none focus:border-accent"
+    >
+      {value === "barre_machine" ? <option value="barre_machine">barre / machine</option> : null}
+      {LOAD_UNIT_CHOICES.map((choice) => (
+        <option key={choice.value} value={choice.value}>
+          {choice.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/**
+ * Icône d'exercice qui se remplit série après série.
+ *
+ * Le remplissage monte à l'intérieur de l'icône, par paliers égaux : deux
+ * séries, deux moitiés ; quatre séries, quatre quarts. Pleine, elle passe au
+ * vert avec une coche. La cible reste de 44 px : elle se touche d'une main,
+ * entre deux séries.
+ */
+function SetProgressButton({
+  label,
+  name,
+  completed,
+  target,
+  onTap,
+}: {
+  label: string;
+  name: string;
+  completed: number;
+  target: number;
+  onTap: () => void;
+}) {
+  const full = completed >= target;
+  const percent = Math.round((completed / target) * 100);
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      aria-pressed={full}
+      aria-label={
+        full
+          ? `${name} : fait, ${target} séries sur ${target}. Toucher pour annuler.`
+          : `${name} : ${completed} série${completed > 1 ? "s" : ""} sur ${target}. Toucher pour valider la suivante.`
+      }
+      className={cn(
+        "tap relative mt-0.5 grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border-2 transition-colors",
+        full ? "border-success text-success" : completed > 0 ? "border-accent text-text" : "border-border-strong text-faint",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-x-0 bottom-0 transition-[height] duration-300 ease-out",
+          full ? "bg-success/25" : "bg-accent/30",
+        )}
+        style={{ height: `${percent}%` }}
+      />
+      {target > 1 && !full ? (
+        <span aria-hidden className="absolute inset-x-1 top-1 flex gap-0.5">
+          {Array.from({ length: target }, (_, i) => (
+            <span key={i} className={cn("h-0.5 flex-1 rounded-full", i < completed ? "bg-accent" : "bg-border-strong")} />
+          ))}
+        </span>
+      ) : null}
+      <span className="relative">{full ? <Check size={22} /> : <span className="text-xs">{label}</span>}</span>
+    </button>
   );
 }

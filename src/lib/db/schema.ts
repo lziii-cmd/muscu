@@ -79,8 +79,28 @@ export const skipReasonEnum = pgEnum("skip_reason", [
  */
 export const sessionLocationEnum = pgEnum("session_location", ["salle", "maison"]);
 
-/** Une charge n'a pas le même sens selon qu'elle est sur barre ou par haltère. */
-export const loadUnitEnum = pgEnum("load_unit", ["barre_machine", "kg_par_haltere", "poids_du_corps"]);
+/**
+ * Nature de la charge saisie.
+ *
+ * « barre » et « machine » sont distinctes : 40 kg à la barre et 40 kg sur une
+ * machine guidée ne se comparent pas. « barre_machine » est l'ancienne valeur
+ * qui les confondait ; elle reste lisible pour les séances déjà enregistrées,
+ * mais n'est plus proposée. « kg_par_haltere » : la charge de CHAQUE haltère.
+ */
+export const loadUnitEnum = pgEnum("load_unit", [
+  "barre_machine",
+  "kg_par_haltere",
+  "poids_du_corps",
+  "barre",
+  "machine",
+]);
+
+/**
+ * Unité dans laquelle la charge a été SAISIE. La base stocke toujours des kilos
+ * (`weight_kg`) ; l'unité de saisie sert à réafficher le nombre que la
+ * personne a lu sur la machine — « 50 lb », pas « 22,68 kg ».
+ */
+export const weightUnitEnum = pgEnum("weight_unit", ["kg", "lb"]);
 
 export const mealSlotEnum = pgEnum("meal_slot", [
   "petit_dejeuner",
@@ -454,6 +474,8 @@ export const sessionExercises = pgTable(
     /** Charge de l'exercice — mode rapide, une valeur pour toutes les séries. */
     weightKg: numeric("weight_kg", { precision: 6, scale: 2 }),
     loadUnit: loadUnitEnum("load_unit"),
+    /** Unité de saisie ; `weight_kg` est toujours converti en kilos. */
+    weightUnit: weightUnitEnum("weight_unit").default("kg").notNull(),
     /** Les kilos d'une machine ne sont comparables qu'à eux-mêmes. */
     machineNote: text("machine_note"),
     setsDone: integer("sets_done"),
@@ -462,6 +484,38 @@ export const sessionExercises = pgTable(
     note: text("note"),
   },
   (table) => [index("session_exercises_session_idx").on(table.sessionId)],
+);
+
+/**
+ * Charge habituelle d'un exercice, pour un compte.
+ *
+ * C'est elle que l'écran de séance propose en premier, avant la charge du
+ * programme : les kilos du document sont un point de départ, ceux qu'on soulève
+ * vraiment sont la référence. Elle est mise à jour à chaque séance enregistrée,
+ * et peut être amorcée d'un bloc depuis un tableau (`scripts/import-charges.ts`).
+ */
+export const exerciseLoads = pgTable(
+  "exercise_loads",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    exerciseId: integer("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "cascade" }),
+    loadUnit: loadUnitEnum("load_unit").notNull(),
+    /** Toujours en kilos ; null pour le poids du corps. */
+    weightKg: numeric("weight_kg", { precision: 6, scale: 2 }),
+    weightUnit: weightUnitEnum("weight_unit").default("kg").notNull(),
+    /**
+     * Date de la séance d'où vient cette charge. Une séance saisie après coup,
+     * mais plus ancienne, ne remplace pas une charge plus récente.
+     */
+    asOf: date("as_of").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("exercise_loads_unique").on(table.userId, table.exerciseId)],
 );
 
 /** Détail série par série. Facultatif : renseigné seulement si les séries diffèrent. */
@@ -788,6 +842,7 @@ export const schemaTables = {
   programExercises,
   sessions,
   sessionExercises,
+  exerciseLoads,
   sessionSets,
   bodyweightEntries,
   measurements,

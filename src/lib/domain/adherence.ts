@@ -55,10 +55,9 @@ export interface LateLogging {
 /**
  * Compare la date de séance à la date de saisie.
  *
- * L'écart n'est pas cosmétique : une séance saisie trois jours après repose sur
- * la mémoire, pas sur la mesure. Elle porte donc un badge, et les analyses qui
- * n'ont pas de sens rétroactivement (durée réelle, respect des repos)
- * l'excluent.
+ * Une saisie après coup n'est pas une saisie douteuse : les charges et les
+ * répétitions notées comptent comme les autres. Seules la durée et les pauses,
+ * qui n'ont pas été chronométrées, sont écartées des analyses de temps.
  */
 export function lateLogging(sessionDate: string, loggedAt: string | null | undefined): LateLogging {
   if (!loggedAt) return { isLate: false, daysLate: 0, label: "" };
@@ -284,7 +283,7 @@ export function loggingQuality(records: SessionRecord[]): LoggingQuality {
     latePercent,
     drifting,
     message: drifting
-      ? `${latePercent} % de tes séances sont saisies après coup : les charges notées de mémoire sont peu fiables.`
-      : `${latePercent} % de saisies en retard.`,
+      ? `${latePercent} % de tes séances sont saisies après coup : pense à lancer le chrono pendant la séance pour que la durée et les repos soient mesurés.`
+      : `${latePercent} % de séances saisies après coup.`,
   };
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/lib/db/client";
 import { currentUserId } from "@/lib/auth/current-user";
@@ -53,7 +53,12 @@ const sessionUpsert = z.object({
           .nullable()
           .optional(),
         weightKg: z.number().min(0).max(999).nullable().optional(),
-        loadUnit: z.enum(["barre_machine", "kg_par_haltere", "poids_du_corps"]).nullable().optional(),
+        loadUnit: z
+          .enum(["barre", "machine", "kg_par_haltere", "poids_du_corps", "barre_machine"])
+          .nullable()
+          .optional(),
+        /** Unité de saisie. `weightKg` arrive toujours converti en kilos. */
+        weightUnit: z.enum(["kg", "lb"]).default("kg"),
         machineNote: z.string().max(200).nullable().optional(),
         setsDone: z.number().int().min(0).max(50).nullable().optional(),
         repsDone: z.number().int().min(0).max(500).nullable().optional(),
@@ -530,6 +535,7 @@ async function applySessionUpsert(
             ? null
             : String(exercise.weightKg),
         loadUnit: exercise.loadUnit ?? null,
+        weightUnit: exercise.weightUnit,
         machineNote: exercise.machineNote ?? null,
         setsDone: exercise.setsDone ?? null,
         repsDone: exercise.repsDone ?? null,
@@ -537,6 +543,40 @@ async function applySessionUpsert(
         note: exercise.note ?? null,
       })),
     );
+  }
+
+  /*
+   * Charge habituelle : ce qui a été fait devient la proposition de la séance
+   * suivante. Seules les lignes cochées comptent — une ligne non faite ne dit
+   * rien de la charge — et une séance plus ancienne, saisie après coup, ne
+   * remplace pas une charge plus récente.
+   */
+  for (const exercise of p.exercises) {
+    if (!exercise.done || !exercise.loadUnit || exercise.loadUnit === "barre_machine") continue;
+    const weightKg =
+      exercise.loadUnit === "poids_du_corps" || exercise.weightKg == null ? null : String(exercise.weightKg);
+    if (exercise.loadUnit !== "poids_du_corps" && weightKg === null) continue;
+    await db
+      .insert(schema.exerciseLoads)
+      .values({
+        userId,
+        exerciseId: exercise.exerciseId,
+        loadUnit: exercise.loadUnit,
+        weightKg,
+        weightUnit: exercise.weightUnit,
+        asOf: p.date,
+      })
+      .onConflictDoUpdate({
+        target: [schema.exerciseLoads.userId, schema.exerciseLoads.exerciseId],
+        set: {
+          loadUnit: exercise.loadUnit,
+          weightKg,
+          weightUnit: exercise.weightUnit,
+          asOf: p.date,
+          updatedAt: new Date(),
+        },
+        setWhere: sql`${schema.exerciseLoads.asOf} <= ${p.date}`,
+      });
   }
 }
 

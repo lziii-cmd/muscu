@@ -273,7 +273,7 @@ export default async function BilanPage() {
           </CardTitle>
           <ul className="space-y-2 text-sm text-muted">
             <li className="flex items-start gap-2">
-              <Badge tone={logging.drifting ? "warning" : "neutral"}>saisie</Badge>
+              <Badge tone="neutral">saisie</Badge>
               <span>{logging.message}</span>
             </li>
             {change ? (
