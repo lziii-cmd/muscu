@@ -1,6 +1,6 @@
 import { Badge, Card, CardTitle, PageHeader, Stat } from "@/components/ui";
 import { LadderCard } from "@/components/ladder-card";
-import { getLadders, getPullupMax, getStrengthTests, getTargets } from "@/lib/queries";
+import { getLadders, getPullupMax, getStrengthTests, getTargets, PULLUP_METRICS } from "@/lib/queries";
 import { pullupTargetStatus, setFormatForMax, shouldRetestMax } from "@/lib/domain/calisthenics";
 
 import { formatDate, today } from "@/lib/utils";
@@ -25,14 +25,14 @@ export default async function CalisthéniePage() {
   // Le document fixe un objectif par mouvement et par jalon ; la traction est
   // celle qui pilote le programme.
   const pullupTargets = allTargets
-    .filter((target) => target.slug.startsWith("tractions"))
+    .filter((target) => PULLUP_METRICS.includes(target.slug))
     .filter((target) => target.value !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const date = today();
 
   const pullupTests = tests
-    .filter((test) => test.metric === "tractions-strictes" && test.value !== null)
+    .filter((test) => PULLUP_METRICS.includes(test.metric) && test.value !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const lastTestDate = pullupTests.length > 0 ? pullupTests[pullupTests.length - 1].date : null;
@@ -126,15 +126,21 @@ export default async function CalisthéniePage() {
         </ul>
       </Card>
 
-      <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">
-        Les sept échelles
-      </h2>
+      {/* Le programme de calisthénie en version 2 n'a plus d'échelles : on
+          n'affiche pas un intertitre au-dessus d'une liste vide. */}
+      {ladders.length > 0 ? (
+        <>
+          <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">
+            Les échelles de progression
+          </h2>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {ladders.map((ladder) => (
-          <LadderCard key={ladder.id} ladder={ladder} />
-        ))}
-      </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {ladders.map((ladder) => (
+              <LadderCard key={ladder.id} ladder={ladder} />
+            ))}
+          </div>
+        </>
+      ) : null}
 
       <Card className="mt-4">
         <CardTitle>Les cinq erreurs qui coûtent le plus cher</CardTitle>

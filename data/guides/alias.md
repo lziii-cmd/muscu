@@ -117,3 +117,7 @@ mouvements différents — l'un vertical, l'autre horizontal.
 | Gainage — hollow rocks + planche | Gainage composé |
 | Gainage — planche + hollow hold | Gainage composé |
 | Gainage — relevés de jambes + gainage latéral | Gainage composé |
+| Traction pronation stricte — 1 rep/série (max − 1) | Traction stricte |
+| Traction stricte pronation — (max − 1) par série | Traction stricte |
+| Traction supination stricte — 2 reps/série (max − 1) | Traction supination |
+| Traction négative pronation (5 s de descente) | Traction négative |

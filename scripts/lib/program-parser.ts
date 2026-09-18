@@ -323,7 +323,18 @@ function parseProgramPart(
     const sessions: DaySession[] = [];
 
     if (!isRestDay) {
-      if (kind === "ppl") {
+      // Un jour découpé en NOYAU / COMPLÉMENT, en salle comme en calisthénie
+      // (version 2 du programme de calisthénie : « plus de découpage
+      // matin/soir, tout se fait en une seule séance »).
+      let hasTiers = false;
+      for (let j = i + 1; j < dayEnd; j++) {
+        if (TIER_HEADING.test(lines[j])) {
+          hasTiers = true;
+          break;
+        }
+      }
+
+      if (kind === "ppl" || hasTiers) {
         // Deux formats coexistent : un seul tableau par jour (v2), ou un bloc
         // NOYAU suivi d'un bloc COMPLÉMENT (v3). Les deux produisent une seule
         // séance prescrite — le complément n'est qu'un ensemble de lignes
@@ -353,7 +364,9 @@ function parseProgramPart(
         }
 
         if (exercises.length > 0) {
-          sessions.push({ slot: "salle", heading: label, exercises });
+          // La calisthénie en séance unique garde le créneau du matin : c'est
+          // là que le programme la place, avant la journée.
+          sessions.push({ slot: kind === "ppl" ? "salle" : "matin", heading: label, exercises });
         }
       } else {
         // Calisthénie : deux blocs, chacun annoncé par un intertitre en gras.
@@ -589,6 +602,122 @@ export function parseProgramme(raw: string, year: number): ParsedProgram {
     errors,
     warnings,
   };
+}
+
+/**
+ * Document de calisthénie autonome (`PROGRAMME-CALISTHENIE.md`, version 2).
+ *
+ * Il n'est plus la « partie 2 » du document de salle : il a ses propres
+ * semaines, ses objectifs aux jalons, son point de départ, et des jours de test
+ * dont le tableau « Mesure | Résultat » liste les métriques relevées. Il n'a
+ * plus d'échelles de progression.
+ */
+export function parseCalisthenicsDocument(
+  raw: string,
+  year: number,
+): Pick<ParsedProgram, "calisthenie" | "targets" | "testMetrics" | "startingMax" | "checkpoints" | "errors"> {
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const errors: string[] = [];
+  const empty = { weeks: [], days: [] };
+
+  const firstDay = lines.find((line) => DAY_HEADING.test(line));
+  const opening = firstDay?.match(DAY_HEADING);
+  const startMonth = opening ? parseFrenchDayMonth(`${opening[2]} ${opening[3]}`)?.month : undefined;
+  if (!startMonth) {
+    errors.push("Calisthénie : aucun jour daté lisible.");
+    return { calisthenie: empty, targets: [], testMetrics: [], startingMax: {}, checkpoints: [], errors };
+  }
+  const toDate = makeCalendar(startMonth, year);
+
+  const calisthenie = parseProgramPart(lines, { start: 0, end: lines.length }, toDate, "calisthenie", errors);
+  if (calisthenie.weeks.length === 0) errors.push("Calisthénie : aucune semaine reconnue.");
+
+  const testDays = calisthenie.days.filter((day) => day.isTestDay).map((day) => day.date);
+  const checkpoints = [...new Set([...testDays, ...readCheckpoints(calisthenie.weeks, toDate)])].sort();
+
+  return {
+    calisthenie,
+    targets: readDatedTargets(lines, toDate),
+    testMetrics: readTestDayMetrics(lines),
+    startingMax: readStartingLevel(lines),
+    checkpoints,
+    errors,
+  };
+}
+
+/**
+ * Nom canonique d'une mesure. Les objectifs écrivent « Traction pronation », le
+ * tableau de test « Tractions pronation (max) » : sans ce rapprochement,
+ * l'objectif et la mesure du même mouvement ne se retrouveraient jamais.
+ */
+export function metricSlug(label: string): string {
+  return slugify(label.replace(/\s*\((max|secondes)\)\s*$/i, "")).replace(/^traction-/, "tractions-");
+}
+
+/** Objectifs aux jalons : une colonne par date, lue dans l'en-tête (« 10 oct »). */
+function readDatedTargets(lines: string[], toDate: (raw: string) => string | null): Target[] {
+  const start = lines.findIndex((line) => /^##\s+(\d+\.\s*)?Objectifs/.test(line));
+  if (start === -1) return [];
+  const table = readTable(lines, start + 1);
+  if (!table) return [];
+
+  const dated = table.headers
+    .map((header, index) => ({ index, date: toDate(header) }))
+    .filter((column): column is { index: number; date: string } => column.date !== null);
+
+  return table.rows
+    .filter((row) => column(table, row, "Mouvement") !== "")
+    .map((row) => {
+      const movement = column(table, row, "Mouvement");
+      const cells = dated.map(({ index }) => row.cells[index] ?? "");
+      const start = column(table, row, "Aujourd'hui");
+      const unit: "reps" | "seconds" = [start, ...cells].some((cell) => /\d\s*s\b/.test(cell)) ? "seconds" : "reps";
+      return {
+        slug: metricSlug(movement),
+        movement,
+        startLabel: start,
+        unit,
+        byDate: Object.fromEntries(
+          dated.map(({ date }, i) => {
+            const match = cells[i].match(/(\d+)/);
+            return [date, match ? Number(match[1]) : null];
+          }),
+        ),
+      };
+    });
+}
+
+/** Métriques relevées aux tests : le tableau « Mesure | Résultat » du premier jour de test. */
+function readTestDayMetrics(lines: string[]): TestMetric[] {
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^\|\s*Mesure\s*\|/.test(lines[i])) continue;
+    const table = readTable(lines, i);
+    if (!table) continue;
+    return table.rows
+      .map((row) => column(table, row, "Mesure"))
+      .filter((label) => label !== "")
+      .map((label) => ({
+        slug: metricSlug(label),
+        label,
+        unit: /seconde/i.test(label) ? ("seconds" as const) : ("reps" as const),
+      }));
+  }
+  return [];
+}
+
+/** Point de départ : « Traction pronation | **2** propres » → { "tractions-pronation": 2 }. */
+function readStartingLevel(lines: string[]): Record<string, number> {
+  const start = lines.findIndex((line) => /^##\s+(\d+\.\s*)?Ton point de départ/.test(line));
+  if (start === -1) return {};
+  const table = readTable(lines, start + 1);
+  if (!table) return {};
+  const result: Record<string, number> = {};
+  for (const row of table.rows) {
+    const movement = column(table, row, "Mouvement");
+    const level = (column(table, row, "Niveau") || column(table, row, "Lecture")).match(/(\d+)/);
+    if (movement !== "" && level) result[metricSlug(movement)] = Number(level[1]);
+  }
+  return result;
 }
 
 /**

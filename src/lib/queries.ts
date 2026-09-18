@@ -754,6 +754,13 @@ export async function getAllExercises() {
     .orderBy(asc(schema.exercises.name));
 }
 
+/**
+ * Noms de la mesure « max de tractions » selon la version du programme :
+ * « tractions strictes » dans la première, « tractions pronation » depuis que la
+ * supination est mesurée à part.
+ */
+export const PULLUP_METRICS = ["tractions-pronation", "tractions-strictes"];
+
 export async function getPullupMax(fallback = 3): Promise<number> {
   const db = getDb();
   const userId = await currentUserId();
@@ -762,7 +769,7 @@ export async function getPullupMax(fallback = 3): Promise<number> {
     .from(schema.strengthTests)
     .where(
       and(
-        eq(schema.strengthTests.metric, "tractions-strictes"),
+        inArray(schema.strengthTests.metric, PULLUP_METRICS),
         eq(schema.strengthTests.userId, userId),
       ),
     )
@@ -910,12 +917,21 @@ export async function getProgramBounds(): Promise<{
 export async function hasCalisthenics(): Promise<boolean> {
   const db = getDb();
   const userId = await currentUserId();
-  const [row] = await db
-    .select({ id: schema.ladders.id })
-    .from(schema.ladders)
-    .where(eq(schema.ladders.userId, userId))
-    .limit(1);
-  return Boolean(row);
+  // Des échelles (première version) ou un programme de calisthénie (version 2,
+  // qui n'en a plus) : l'un ou l'autre suffit à ouvrir l'onglet.
+  const [[ladder], [program]] = await Promise.all([
+    db
+      .select({ id: schema.ladders.id })
+      .from(schema.ladders)
+      .where(eq(schema.ladders.userId, userId))
+      .limit(1),
+    db
+      .select({ id: schema.programs.id })
+      .from(schema.programs)
+      .where(and(eq(schema.programs.userId, userId), eq(schema.programs.code, "calisthenie")))
+      .limit(1),
+  ]);
+  return Boolean(ladder || program);
 }
 
 /**

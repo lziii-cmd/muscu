@@ -11,14 +11,21 @@
  * depuis les PDF. Les contrôles de cohérence restent : un seed faux est pire
  * qu'un seed absent, et une charge fausse ferait charger la mauvaise barre.
  */
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { resolveGuides } from "./lib/resolve-guides";
-import { parseProgramme, CHECKPOINT_DATES, type ProgramDay } from "./lib/program-parser";
+import {
+  parseCalisthenicsDocument,
+  parseProgramme,
+  CHECKPOINT_DATES,
+  type ProgramDay,
+} from "./lib/program-parser";
 import type { Volume } from "./lib/volume";
 import { weekdayOf } from "./lib/dates";
 
 const YEAR = 2026;
 const SOURCE = "PROGRAMME-COMPLET.md";
+/** Programme de calisthénie autonome, s'il existe (version 2 : séance unique). */
+const CALISTHENICS_SOURCE = "PROGRAMME-CALISTHENIE.md";
 
 function fail(message: string): never {
   console.error(`\n✗ ${message}\n`);
@@ -26,6 +33,23 @@ function fail(message: string): never {
 }
 
 const parsed = parseProgramme(readFileSync(SOURCE, "utf8"), YEAR);
+
+/*
+ * La calisthénie peut vivre dans son propre document. Il complète alors le
+ * programme de salle : sa partie, ses objectifs aux jalons, ses mesures de
+ * test, son point de départ et ses jours de test. Les échelles de progression
+ * n'y existent plus ; on ne les exige donc que du format en deux parties.
+ */
+const standaloneCalisthenics = parsed.calisthenie.weeks.length === 0 && existsSync(CALISTHENICS_SOURCE);
+if (standaloneCalisthenics) {
+  const cali = parseCalisthenicsDocument(readFileSync(CALISTHENICS_SOURCE, "utf8"), YEAR);
+  parsed.calisthenie = cali.calisthenie;
+  parsed.targets = cali.targets;
+  parsed.testMetrics = cali.testMetrics;
+  parsed.startingMax = cali.startingMax;
+  parsed.checkpoints = [...new Set([...parsed.checkpoints, ...cali.checkpoints])].sort();
+  parsed.errors.push(...cali.errors);
+}
 
 if (parsed.errors.length > 0) {
   parsed.errors.slice(0, 20).forEach((e) => console.error("  ERREUR :", e));
@@ -144,7 +168,11 @@ if (mondayOffsets && thursdayOffsets) {
 
 // Échelles, objectifs et métriques appartiennent à la calisthénie : les exiger
 // d'un document qui n'en contient pas refuserait un programme pourtant valide.
-if (hasCalisthenics) {
+if (hasCalisthenics && standaloneCalisthenics) {
+  if (parsed.targets.length === 0) problems.push("calisthénie : aucun objectif aux jalons");
+  if (parsed.testMetrics.length === 0) problems.push("calisthénie : aucune mesure de test");
+  if (Object.keys(parsed.startingMax).length === 0) problems.push("calisthénie : point de départ introuvable");
+} else if (hasCalisthenics) {
   if (parsed.ladders.length < 5) problems.push(`${parsed.ladders.length} échelles seulement`);
   if (parsed.targets.length < 5) problems.push(`${parsed.targets.length} objectifs seulement`);
   if (parsed.testMetrics.length < 5) problems.push(`${parsed.testMetrics.length} métriques seulement`);
@@ -221,7 +249,7 @@ writeFileSync(
     {
       generatedAt: new Date().toISOString(),
       year: YEAR,
-      source: SOURCE,
+      source: standaloneCalisthenics ? `${SOURCE} + ${CALISTHENICS_SOURCE}` : SOURCE,
       /*
        * Les contrôles physiques ne valent que s'ils tombent pendant le
        * programme. Les émettre tels quels daterait de septembre 2026 des
@@ -316,9 +344,9 @@ function writeDays(days: ProgramDay[], weekNumber: number, withHome: boolean) {
       out.push(
         withHome
           ? "| # | Exercice | Bloc | Séries × reps | Charge | Haltères | Repos | Alternative maison |"
-          : "| Exercice | Volume | Repère | Repos |",
+          : "| Exercice | Bloc | Volume | Repère | Repos |",
       );
-      out.push(withHome ? "|---|---|---|---|---|---|---|---|" : "|---|---|---|---|");
+      out.push(withHome ? "|---|---|---|---|---|---|---|---|" : "|---|---|---|---|---|");
 
       for (const e of session.exercises) {
         const rest = e.restSeconds === 0 ? "enchaîner" : e.restSeconds === null ? "—" : `${e.restSeconds} s`;
@@ -326,7 +354,7 @@ function writeDays(days: ProgramDay[], weekNumber: number, withHome: boolean) {
         out.push(
           withHome
             ? `| ${e.order} | ${e.name} | ${tier} | ${volumeLabel(e.volume)} | ${e.loadRaw || "—"} | ${e.dumbbellRaw || "—"} | ${rest} | ${e.homeAlternative || "—"} |`
-            : `| ${e.name} | ${volumeLabel(e.volume)} | ${e.cue || "—"} | ${rest} |`,
+            : `| ${e.name} | ${tier} | ${volumeLabel(e.volume)} | ${e.cue || "—"} | ${rest} |`,
         );
       }
       out.push("");
@@ -398,7 +426,7 @@ const count = (part: typeof parsed.ppl) =>
   part.days.reduce((sum, day) => sum + day.sessions.reduce((s, x) => s + x.exercises.length, 0), 0);
 
 console.log("✓ Seed écrit.");
-console.log(`  Source       : ${SOURCE}`);
+console.log(`  Source       : ${SOURCE}${standaloneCalisthenics ? ` + ${CALISTHENICS_SOURCE}` : ""}`);
 console.log(
   `  Salle        : ${parsed.ppl.weeks.length} semaines, ${parsed.ppl.days.length} jours, ${count(parsed.ppl)} lignes`,
 );

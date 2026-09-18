@@ -79,9 +79,34 @@ if (!startMonth) {
 const headerYear = raw.match(/(\d{4})\s*→/);
 const startYear = headerYear ? Number(headerYear[1]) : new Date().getUTCFullYear();
 
-/** Une date française, avec son jour de semaine et son année éventuels. */
+/*
+ * Abréviations des en-têtes de tableau (« 3 oct », « 17 jan »). Elles sont
+ * réécrites abrégées, pour que le tableau garde sa forme. « mars », « mai »,
+ * « juin » et « août » sont déjà complets.
+ */
+const ABBREVIATIONS: Record<string, number> = {
+  jan: 1,
+  janv: 1,
+  fév: 2,
+  févr: 2,
+  avr: 4,
+  juil: 7,
+  sept: 9,
+  oct: 10,
+  nov: 11,
+  déc: 12,
+};
+const SHORT = ["jan", "fév", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"];
+for (const [abbreviation, month] of Object.entries(ABBREVIATIONS)) MONTH_NUMBER.set(abbreviation, month);
+
+/**
+ * Une date française, avec son jour de semaine et son année éventuels. Les mois
+ * sont essayés du plus long au plus court, et doivent finir le mot : sans cela
+ * « sept » mordrait dans « septembre ».
+ */
+const monthAlternatives = [...MONTH_NUMBER.keys()].sort((a, b) => b.length - a.length).join("|");
 const DATE = new RegExp(
-  `(?:(${WEEKDAYS.join("|")})\\s+)?(\\d{1,2})\\s+(${[...MONTH_NUMBER.keys()].join("|")})(\\s+(\\d{4}))?`,
+  `(?:(${WEEKDAYS.join("|")})\\s+)?(\\d{1,2})\\s+(${monthAlternatives})(?![a-zûéèôîà])(\\s+(\\d{4}))?`,
   "g",
 );
 
@@ -102,7 +127,9 @@ const out = lines.map((line, index) =>
 
     const rebuilt =
       (weekday ? `${WEEKDAYS[date.getUTCDay()]} ` : "") +
-      `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}` +
+      `${date.getUTCDate()} ${
+        String(monthRaw).toLowerCase() in ABBREVIATIONS ? SHORT[date.getUTCMonth()] : MONTHS[date.getUTCMonth()]
+      }` +
       (yearRaw ? ` ${date.getUTCFullYear()}` : "");
 
     shifted += 1;

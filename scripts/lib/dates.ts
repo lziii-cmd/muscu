@@ -14,6 +14,19 @@ const MONTHS: Record<string, number> = {
   novembre: 11,
   décembre: 12,
   decembre: 12,
+  // Abréviations des en-têtes de tableau : « 3 oct », « 17 jan ».
+  jan: 1,
+  janv: 1,
+  fév: 2,
+  fev: 2,
+  févr: 2,
+  avr: 4,
+  juil: 7,
+  sept: 9,
+  oct: 10,
+  nov: 11,
+  déc: 12,
+  dec: 12,
 };
 
 /** « 31 août » -> { day: 31, month: 8 }. Null si ce n'est pas une date française. */

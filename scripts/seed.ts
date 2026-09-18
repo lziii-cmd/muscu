@@ -51,6 +51,8 @@ interface SeedFile {
   ladders: ParsedProgram["ladders"];
   targets: ParsedProgram["targets"];
   testMetrics: ParsedProgram["testMetrics"];
+  /** Niveau de départ par mesure (« tractions-pronation » : 2). */
+  startingMax?: Record<string, number>;
 }
 
 function slugify(name: string): string {
@@ -421,6 +423,52 @@ async function main() {
   }
 
   for (const program of seed.programs) await insertProgram(program);
+
+  /*
+   * Re-liaison. Une séance enregistrée à une date et un créneau que le nouveau
+   * programme prescrit encore est rattachée à cette prescription, exercice par
+   * exercice. Sans cela, réimporter le même programme — pour ajouter la
+   * calisthénie, corriger une fiche — détacherait chaque séance déjà faite, et
+   * l'écran ne retrouverait plus ce qui a été saisi ligne par ligne.
+   */
+  const relinked = await db.query<{ id: number }>(`
+    update sessions s set program_session_id = ps.id,
+           title = case when s.title = ps.label then null else s.title end
+    from program_sessions ps join programs p on p.id = ps.program_id
+    where p.user_id = ${userId} and s.user_id = ${userId}
+      and s.program_session_id is null and s.slot <> 'libre'
+      and ps.date = s.date and ps.slot = s.slot and not ps.is_rest_day
+    returning s.id`);
+  await db.execute(`
+    update session_exercises se set program_exercise_id = pe.id
+    from sessions s, program_exercises pe
+    where se.session_id = s.id and s.user_id = ${userId}
+      and se.program_exercise_id is null and not se.is_extra
+      and pe.program_session_id = s.program_session_id
+      and pe.exercise_id = se.exercise_id and pe.order_index = se.order_index`);
+  if (relinked.length > 0) console.log(`  ${relinked.length} séance(s) rattachée(s) au programme importé`);
+
+  /*
+   * Point de départ : il est une mesure, pas un objectif. Il entre donc dans
+   * les tests, daté du premier jour de calisthénie, pour que la règle du
+   * (max − 1) parte du vrai niveau et non d'une valeur par défaut. Un test déjà
+   * saisi ce jour-là n'est pas écrasé.
+   */
+  const caliStart = seed.programs
+    .find((program) => program.code === "calisthenie")
+    ?.days.map((day) => day.date)
+    .sort()[0];
+  const starting = Object.entries(seed.startingMax ?? {});
+  if (caliStart && starting.length > 0) {
+    for (const [metric, value] of starting) {
+      await db.execute(
+        `insert into strength_tests (user_id, date, metric, value, note)
+         values (${userId}, ${q(caliStart)}, ${q(metric)}, ${value}, 'Point de départ du programme')
+         on conflict (user_id, date, metric) do nothing`,
+      );
+    }
+    console.log(`  point de départ enregistré au ${caliStart} : ${starting.map(([m, v]) => `${m} ${v}`).join(", ")}`);
+  }
 
   // Le journal ne doit pas avoir perdu une ligne. Si c'est le cas, on le dit
   // haut et fort : l'export fait avant l'import permet de le reconstituer.
