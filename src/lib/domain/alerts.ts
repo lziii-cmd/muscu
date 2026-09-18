@@ -124,7 +124,7 @@ export function sleepAlert(entries: SleepEntry[], minimumHours = 6.5): Alert | n
     title: "Sommeil insuffisant",
     message: `${average.toFixed(1)} h de moyenne sur 3 nuits, sous le seuil de ${minimumHours} h.`,
     action:
-      "Avec la calisthénie au réveil et la salle à 23h, le sommeil est ton facteur limitant. Coupe une séance de volume avant de couper une nuit.",
+      "Avec la calisthénie au réveil et la salle à 22h, le sommeil est ton facteur limitant. Coupe une séance de volume avant de couper une nuit.",
   };
 }
 

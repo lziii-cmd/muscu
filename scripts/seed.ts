@@ -167,6 +167,61 @@ async function main() {
   console.log(`  ${exercises.size} exercices distincts`);
 
   // -------------------------------------------------------------------------
+  // Journal lié à l'ancien programme.
+  //
+  // Une séance enregistrée pointe vers la séance prescrite qu'elle réalisait.
+  // Réécrire le programme supprimerait ces cibles : la clé étrangère refuse, et
+  // c'est voulu — un re-seed ne doit pas effacer ce qui a été vécu.
+  //
+  // Quand le programme change vraiment (`--remplacer`), on détache le journal
+  // au lieu de le perdre : chaque séance garde sa date, son créneau, son statut,
+  // ses exercices, ses charges et ses répétitions, et reçoit en titre le
+  // libellé de la séance qu'elle réalisait (« PUSH A »). Seul disparaît le
+  // pointeur vers une prescription qui n'existera plus.
+  // -------------------------------------------------------------------------
+  const replace = process.argv.includes("--remplacer");
+  const journal = async () =>
+    (
+      await db.query<{ sessions: number; lignes: number; liees: number }>(
+        `select (select count(*)::int from sessions where user_id = ${userId}) as sessions,
+                (select count(*)::int from session_exercises se join sessions s on s.id = se.session_id
+                  where s.user_id = ${userId}) as lignes,
+                (select count(*)::int from sessions where user_id = ${userId}
+                  and program_session_id is not null) as liees`,
+      )
+    )[0];
+
+  const before = await journal();
+  if (before.liees > 0 && !replace) {
+    console.error(
+      `✗ ${before.liees} séance(s) enregistrée(s) réalisent l'actuel programme de ce compte.\n` +
+        "  Le réécrire les laisserait sans cible. Exporte d'abord le journal :\n" +
+        `    npx tsx scripts/export-user.ts --user ${username}\n` +
+        "  puis relance avec --remplacer pour les détacher de l'ancien programme.",
+    );
+    await db.close();
+    process.exit(1);
+  }
+
+  if (replace && before.liees > 0) {
+    await db.execute(`
+      update sessions s set title = coalesce(s.title, ps.label)
+      from program_sessions ps
+      where ps.id = s.program_session_id and s.user_id = ${userId}`);
+    await db.execute(`
+      update session_exercises set program_exercise_id = null
+      where program_exercise_id is not null
+        and session_id in (select id from sessions where user_id = ${userId})`);
+    await db.execute(`
+      update sessions set program_session_id = null
+      where user_id = ${userId} and program_session_id is not null`);
+    // Les contrôles non encore passés appartiennent à l'ancien calendrier ; ceux
+    // qui ont eu lieu sont du journal et restent.
+    await db.execute(`delete from checkpoints where user_id = ${userId} and completed = false`);
+    console.log(`  ${before.liees} séance(s) détachée(s) de l'ancien programme, titre conservé`);
+  }
+
+  // -------------------------------------------------------------------------
   // Réécriture du programme de CE compte. Les autres comptes et le journal des
   // séances réalisées ne sont pas touchés.
   // -------------------------------------------------------------------------
@@ -350,13 +405,13 @@ async function main() {
                (program_session_id, exercise_id, order_label, order_index, superset_group,
                 sets, reps_low, reps_high, hold_seconds_low, hold_seconds_high, max_offset,
                 per_side, load_raw, load_kg, dumbbell_raw, dumbbell_kg, rest_seconds, cue,
-                home_alternative)
+                home_alternative, optional)
              values (${sessionId}, ${exerciseId}, ${q(e.order)}, ${index}, ${q(e.supersetGroup)},
                      ${q(e.volume.sets)}, ${q(e.volume.repsLow)}, ${q(e.volume.repsHigh)},
                      ${q(e.volume.holdSecondsLow)}, ${q(e.volume.holdSecondsHigh)}, ${q(e.volume.maxOffset)},
                      ${q(e.volume.perSide)}, ${q(e.loadRaw || null)}, ${q(e.loadKg)},
                      ${q(e.dumbbellRaw || null)}, ${q(e.dumbbellKg)}, ${q(e.restSeconds)},
-                     ${q(e.cue || null)}, ${q(e.homeAlternative || null)})`,
+                     ${q(e.cue || null)}, ${q(e.homeAlternative || null)}, ${q(e.optional ?? false)})`,
           );
           lines++;
         }
@@ -366,6 +421,19 @@ async function main() {
   }
 
   for (const program of seed.programs) await insertProgram(program);
+
+  // Le journal ne doit pas avoir perdu une ligne. Si c'est le cas, on le dit
+  // haut et fort : l'export fait avant l'import permet de le reconstituer.
+  const after = await journal();
+  if (after.sessions !== before.sessions || after.lignes !== before.lignes) {
+    console.error(
+      `✗ Journal modifié : ${before.sessions} → ${after.sessions} séances, ` +
+        `${before.lignes} → ${after.lignes} lignes. Restaure depuis data/export/.`,
+    );
+    await db.close();
+    process.exit(1);
+  }
+  console.log(`  Journal intact : ${after.sessions} séances, ${after.lignes} lignes d'exercice`);
 
   await db.close();
   console.log(`\n✓ Programme importé pour ${account.display_name}.`);

@@ -125,7 +125,7 @@ export function deficitTarget(): DeficitTarget {
     lowKcal: 300,
     highKcal: 400,
     message:
-      "-300 à -400 kcal/jour. Pas plus : un gros déficit fait fondre le muscle en premier et sabote la séance de 23h.",
+      "-300 à -400 kcal/jour. Pas plus : un gros déficit fait fondre le muscle en premier et sabote la séance de 22h.",
   };
 }
 

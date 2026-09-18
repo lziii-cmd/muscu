@@ -7,7 +7,6 @@ import {
   getTargets,
   getTestMetrics,
 } from "@/lib/queries";
-import { CHECKPOINT_DATES } from "@/lib/targets";
 import { cn, formatDate, today } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +28,16 @@ export default async function TestsPage() {
     getTargets(),
   ]);
 
+  /*
+   * Les dates viennent des contrôles importés pour le compte, pas d'une
+   * constante : la précédente portait le calendrier du premier programme, et
+   * aurait annoncé un contrôle le 19 septembre à un programme qui le prévoit
+   * le 10 octobre.
+   */
+  const CHECKPOINT_DATES = checkpoints.map((checkpoint) => checkpoint.date);
   const date = today();
-  const nextDate = CHECKPOINT_DATES.find((d) => d >= date) ?? CHECKPOINT_DATES[CHECKPOINT_DATES.length - 1];
+  // Sans contrôle prévu, la saisie d'un test se fait au jour même.
+  const nextDate = CHECKPOINT_DATES.find((d) => d >= date) ?? CHECKPOINT_DATES.at(-1) ?? date;
 
   const valueFor = (testDate: string, metric: string) =>
     tests.find((test) => test.date === testDate && test.metric === metric)?.value ?? null;
@@ -44,8 +51,12 @@ export default async function TestsPage() {
 
       <Card className="mb-4">
         <CardTitle
-          hint="Les quatre jalons du programme"
-          action={<Badge tone="accent">prochain : {formatDate(nextDate)}</Badge>}
+          hint="Les jalons du programme"
+          action={
+            CHECKPOINT_DATES.length > 0 ? (
+              <Badge tone="accent">prochain : {formatDate(nextDate)}</Badge>
+            ) : null
+          }
         >
           Calendrier
         </CardTitle>

@@ -78,7 +78,11 @@ export function getDb(): Database {
   const existing = container[CLIENT_KEY];
   if (existing) return existing;
 
-  const url = process.env.DATABASE_URL;
+  // Une base locale nommée (`PGLITE_DIR`, posée par le test de fumée) l'emporte
+  // sur `.env.local` : sans cela, un test lancé depuis un poste configuré pour
+  // Neon écrirait sur la production. Jamais sur Vercel, où la garde de
+  // `createLocalClient` refuse de toute façon la base locale.
+  const url = process.env.PGLITE_DIR && !process.env.VERCEL ? "" : process.env.DATABASE_URL;
   const client = url ? createNeonClient(url) : createLocalClient();
   container[CLIENT_KEY] = client;
   return client;

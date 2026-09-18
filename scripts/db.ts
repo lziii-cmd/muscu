@@ -23,9 +23,17 @@ export type SqlRunner = {
 };
 
 export async function openDatabase(): Promise<SqlRunner> {
-  const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
+  // `||` et non `??` : une variable *présente mais vide* — un gabarit d'env où
+  // la ligne existe sans valeur — doit se comporter comme une absence. Avec
+  // `??`, une chaîne vide gagnait sur `DATABASE_URL` renseignée, et le script
+  // basculait sur PGlite sans rien dire : on croyait viser Neon.
+  const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 
-  if (url) {
+  // Demander une base locale nommée l'emporte sur `.env.local`. Vider les
+  // variables Neon ne suffit pas : sous PowerShell, une variable vidée est
+  // supprimée, et dotenv la recharge aussitôt depuis le fichier — un essai
+  // local partait alors écrire sur la production.
+  if (url && !process.env.PGLITE_DIR) {
     const { neon } = await import("@neondatabase/serverless");
     const sql = neon(url);
     return {

@@ -369,6 +369,13 @@ export const programExercises = pgTable(
     cue: text("cue"),
     /** Équivalent réalisable à la maison, fourni par le programme. */
     homeAlternative: text("home_alternative"),
+    /**
+     * Ligne du bloc COMPLÉMENT : à faire « les bons jours », jamais obligatoire.
+     * Un complément sauté ne doit pas compter comme une séance manquée — d'où un
+     * drapeau sur la ligne plutôt qu'une seconde séance prescrite, qui aurait
+     * ajouté une séance de plus au calcul d'assiduité.
+     */
+    optional: boolean("optional").default(false).notNull(),
   },
   (table) => [index("program_exercises_session_idx").on(table.programSessionId)],
 );

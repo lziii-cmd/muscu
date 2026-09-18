@@ -60,6 +60,13 @@ export interface PrescribedExercise {
   cue: string | null;
   /** Équivalent maison fourni par le programme pour cet exercice. */
   homeAlternative: string | null;
+  /**
+   * Ligne du bloc COMPLÉMENT : prescrite, jamais obligatoire. Elle s'affiche
+   * après le noyau et ne compte pas dans le décompte de la séance — sans quoi
+   * une séance faite entièrement afficherait « 5/8 » et se lirait comme un
+   * échec.
+   */
+  optional: boolean;
 }
 
 export interface SessionData {
@@ -441,10 +448,17 @@ export function SessionScreen({
     setExtras((current) => current.filter((e) => e.key !== key));
   };
 
+  /*
+   * Le décompte porte sur le noyau : c'est lui qui définit « la séance faite ».
+   * Le complément s'y ajoute quand il est coché, mais ne gonfle jamais le
+   * dénominateur — une séance complète du noyau doit pouvoir afficher 5/5.
+   */
+  const core = session.prescribed.filter((e) => !e.optional);
+  const complement = session.prescribed.filter((e) => e.optional);
   const doneCount =
-    session.prescribed.filter((e) => entries[e.id]?.done).length +
-    extras.filter((e) => e.done).length;
-  const total = session.prescribed.length + extras.length;
+    core.filter((e) => entries[e.id]?.done).length + extras.filter((e) => e.done).length;
+  const total = core.length + extras.length;
+  const complementDone = complement.filter((e) => entries[e.id]?.done).length;
 
   const late = useMemo(() => lateLogging(date, new Date().toISOString()), [date]);
 
@@ -774,6 +788,9 @@ export function SessionScreen({
             <div className="flex items-center justify-between px-4 py-2 text-xs text-faint sm:px-5">
               <span>
                 {doneCount}/{total} exercices
+                {complement.length > 0
+                  ? ` · complément ${complementDone}/${complement.length}`
+                  : ""}
               </span>
               {elapsed > 3600 ? (
                 <span className="text-warning">Au-delà des 60 min visées</span>
@@ -781,13 +798,26 @@ export function SessionScreen({
             </div>
 
             <ul className="divide-y divide-border">
-              {session.prescribed.map((exercise) => {
+              {[...core, ...complement].map((exercise, index, list) => {
                 const entry = entries[exercise.id];
                 const isOpen = expanded === exercise.id;
                 const isSuperset = exercise.supersetGroup !== null;
+                // Première ligne du complément : c'est là que la séance
+                // obligatoire s'arrête et que le bonus commence.
+                const opensComplement =
+                  exercise.optional && (index === 0 || !list[index - 1].optional);
 
                 return (
                   <li key={exercise.id} className="px-4 py-3 sm:px-5">
+                    {opensComplement ? (
+                      <div className="-mx-4 mb-3 border-y border-border bg-raised px-4 py-2 sm:-mx-5 sm:px-5">
+                        <p className="text-sm font-medium">Complément — facultatif</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          Le noyau est fait. La suite se fait les bons jours : la sauter n'est pas un
+                          échec, et ne compte pas contre toi.
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="flex items-start gap-3">
                       <button
                         type="button"

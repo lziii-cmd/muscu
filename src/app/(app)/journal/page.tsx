@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge, Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
-import { getPrescribedRange, getSessionRecords } from "@/lib/queries";
+import { getPrescribedRange, getProgramBounds, getSessionRecords } from "@/lib/queries";
 import {
   adherence,
   adherenceBySlot,
@@ -16,20 +16,37 @@ import { cn, formatDate, today, weekdayName } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const PROGRAM_START = "2026-08-24";
-const PROGRAM_END = "2026-12-20";
+const DAY = 86_400_000;
+const shift = (iso: string, days: number) =>
+  new Date(new Date(`${iso}T00:00:00Z`).getTime() + days * DAY).toISOString().slice(0, 10);
+/** Lundi de la semaine d'une date : le calendrier s'affiche en colonnes L → D. */
+const mondayOf = (iso: string) => shift(iso, -((new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7));
 
 /**
  * Journal : calendrier du programme, assiduité, et lecture des absences.
  *
  * Le calendrier n'est pas décoratif : c'est par lui qu'on ouvre un jour passé
  * pour le saisir après coup.
+ *
+ * Ses bornes viennent du compte. Elles étaient écrites en dur (24 août →
+ * 20 décembre) : un programme qui court jusqu'en janvier aurait vu ses cinq
+ * dernières semaines absentes du calendrier et de l'assiduité, sans rien
+ * d'anormal à l'écran. Le calendrier remonte aussi jusqu'à la première séance
+ * enregistrée : l'historique d'un programme remplacé reste consultable.
  */
 export default async function JournalPage() {
-  const [prescribed, records] = await Promise.all([
-    getPrescribedRange(PROGRAM_START, PROGRAM_END),
-    getSessionRecords(PROGRAM_START, PROGRAM_END),
-  ]);
+  const bounds = await getProgramBounds();
+  const todayIso = today();
+  const programStart = bounds?.startDate ?? todayIso;
+  const programEnd = bounds?.endDate ?? todayIso;
+
+  // Tout le journal jusqu'à la fin du programme, historique compris.
+  const records = await getSessionRecords("2000-01-01", programEnd);
+  const firstLogged = records[0]?.date;
+  const calendarStart = mondayOf(firstLogged && firstLogged < programStart ? firstLogged : programStart);
+  const programMonday = mondayOf(programStart);
+
+  const prescribed = await getPrescribedRange(calendarStart, programEnd);
 
   const sessionRecords: SessionRecord[] = records.map((row) => ({
     date: row.date,
@@ -71,27 +88,39 @@ export default async function JournalPage() {
   }
 
   for (const row of sessionRecords) {
-    const entry = days.get(row.date);
-    if (!entry) continue;
+    // Un jour vécu hors du programme actuel — historique d'un programme
+    // remplacé, séance libre — reste affiché : ce qui a été fait ne disparaît
+    // pas du calendrier parce que la prescription a changé.
+    const entry = days.get(row.date) ?? {
+      planned: 0,
+      done: 0,
+      partial: 0,
+      missed: 0,
+      isRest: false,
+      isTest: false,
+    };
+    days.set(row.date, entry);
     if (row.status === "done") entry.done++;
     if (row.status === "partial") entry.partial++;
     if (row.status === "missed") entry.missed++;
   }
 
   const weeks: string[][] = [];
-  let cursor = PROGRAM_START;
-  while (cursor <= PROGRAM_END) {
+  let cursor = calendarStart;
+  while (cursor <= programEnd) {
     const week: string[] = [];
     for (let i = 0; i < 7; i++) {
       week.push(cursor);
-      cursor = new Date(new Date(`${cursor}T00:00:00Z`).getTime() + 86_400_000)
-        .toISOString()
-        .slice(0, 10);
+      cursor = shift(cursor, 1);
     }
     weeks.push(week);
   }
 
-  const todayIso = today();
+  /** Numéro de semaine du programme ; rien pour l'historique qui le précède. */
+  const weekLabel = (monday: string) => {
+    const n = Math.round((Date.parse(monday) - Date.parse(programMonday)) / (7 * DAY)) + 1;
+    return n >= 1 ? `S${n}` : "";
+  };
 
   return (
     <>
@@ -146,9 +175,9 @@ export default async function JournalPage() {
               ))}
             </div>
 
-            {weeks.map((week, index) => (
+            {weeks.map((week) => (
               <div key={week[0]} className="mb-1 grid grid-cols-8 items-center gap-1">
-                <span className="text-[10px] text-faint tabular-nums">S{index + 1}</span>
+                <span className="text-[10px] text-faint tabular-nums">{weekLabel(week[0])}</span>
                 {week.map((date) => {
                   const entry = days.get(date);
                   const isFuture = date > todayIso;
@@ -158,7 +187,9 @@ export default async function JournalPage() {
                   if (!entry) tone = "bg-transparent";
                   else if (entry.isRest) tone = "bg-border/40";
                   else if (entry.missed > 0) tone = "bg-danger/70";
-                  else if (entry.done + entry.partial >= entry.planned && entry.planned > 0)
+                  // Un jour vécu sans prescription (historique) n'a rien à
+                  // compléter : fait, il est vert.
+                  else if (entry.done + entry.partial > 0 && entry.done + entry.partial >= entry.planned)
                     tone = "bg-success/80";
                   else if (entry.done + entry.partial > 0) tone = "bg-warning/70";
 
@@ -193,7 +224,7 @@ export default async function JournalPage() {
           <ul className="space-y-3">
             {(["salle", "matin", "soir"] as const).map((slot) => {
               const slotStats = bySlot[slot];
-              const label = slot === "salle" ? "Salle (23h)" : slot === "matin" ? "Matin (avant 7h)" : "Soir (maison)";
+              const label = slot === "salle" ? "Salle (22h)" : slot === "matin" ? "Matin (avant 7h)" : "Soir (maison)";
               return (
                 <li key={slot}>
                   <div className="mb-1 flex justify-between text-sm">

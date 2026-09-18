@@ -4,8 +4,14 @@ Suivi d'entraînement, de diète et de progression. PWA installable, utilisable 
 
 **Un programme par personne.** Aucune date, aucun découpage n'est écrit dans le code : les bornes,
 les blocs, les jours et les contrôles viennent du programme importé pour le compte connecté. Deux
-programmes cohabitent aujourd'hui — une musculation PPL avec calisthénie sur 17 semaines, et une
-musculation à domicile sur 18 semaines, sans calisthénie.
+programmes cohabitent aujourd'hui — une musculation PPL sur 19 semaines, découpée en noyau et
+complément, et une musculation à domicile sur 18 semaines.
+
+**Noyau et complément.** Le programme PPL découpe chaque séance en deux : un *noyau* d'environ
+60 minutes, à faire tous les jours d'entraînement, et un *complément* de 10 à 20 minutes, à faire
+les bons jours. Le complément est prescrit mais jamais obligatoire : il porte un drapeau
+`optional` sur la ligne d'exercice, et non une séance à part. Une séance à part aurait fait compter
+un complément sauté comme une séance manquée.
 
 Le contenu des programmes vient de documents Markdown qui se déclarent source de vérité :
 **`PROGRAMME-COMPLET.md`** et **`PROGRAMME-NOURAH.md`**.
@@ -65,10 +71,12 @@ Puis importer le programme **d'un compte** :
 npm run db:seed -- --user abdou
 ```
 
-Le seed importe pour ce compte : 9 échelles de progression avec leur niveau de départ, 8 objectifs
-jalonnés, 11 métriques de test, 4 contrôles, et les 17 semaines des deux programmes (299 séances
-prescrites, 892 lignes d'exercices, dont 480 avec leur alternative maison). Le catalogue des 111
-exercices et les 14 aliments du marché local sont partagés : ce sont des référentiels neutres.
+Le seed importe pour ce compte les 19 semaines du programme PPL : 130 jours, 887 lignes
+d'exercices — 555 de noyau et 332 de complément — toutes avec leur alternative maison, et 44 fiches
+d'exécution. Les échelles de progression, objectifs jalonnés et métriques de test n'existent que
+pour un programme qui comporte une calisthénie ; celui-ci n'en a pas, et l'onglet correspondant
+disparaît. Le catalogue d'exercices et les 14 aliments du marché local sont partagés : ce sont des
+référentiels neutres.
 
 Le seed ne touche qu'au programme du compte visé, et jamais au journal de séances — ni au sien, ni à
 celui des autres. On peut donc le relancer, et importer un programme différent par personne :
@@ -141,6 +149,7 @@ journée de volume du jeudi qui ne serait pas plus légère que celle du lundi.
 | `npm run db:generate` | Génère une migration depuis le schéma |
 | `npm run db:migrate` | Applique les migrations |
 | `npm run db:seed -- --user X` | Importe le programme du compte X |
+| `npx tsx scripts/export-user.ts --user X` | **Lecture seule** — exporte tout ce qu'un compte a enregistré, en JSON et en résumé lisible |
 | `npm run users -- list` | Liste les comptes |
 | `npm run users -- create --user X --password "…"` | Crée un compte (`--role admin` pour l'administration) |
 | `npm run db:reset` | **Destructif** — vide le schéma |

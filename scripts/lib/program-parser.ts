@@ -1,6 +1,6 @@
 import { column, readTable, type MarkdownTable } from "./markdown";
 import { parseKg, parseRest, parseVolume, type Volume } from "./volume";
-import { parseFrenchDate } from "./dates";
+import { makeCalendar, parseFrenchDayMonth } from "./dates";
 
 /**
  * Parseur de `PROGRAMME-COMPLET.md`.
@@ -24,6 +24,14 @@ export interface ExerciseLine {
   supersetGroup: string | null;
   homeAlternative: string;
   cue: string;
+  /**
+   * Ligne du bloc COMPLÉMENT : à faire « les bons jours », jamais obligatoire.
+   * Le document est explicite — « sauter le complément n'est jamais un échec ».
+   * D'où un drapeau sur la ligne plutôt qu'une seconde séance prescrite : une
+   * séance en compterait une de plus à l'assiduité, et la sauter se lirait comme
+   * une séance manquée.
+   */
+  optional: boolean;
 }
 
 export interface DaySession {
@@ -78,6 +86,12 @@ export interface ParsedProgram {
   targets: Target[];
   testMetrics: TestMetric[];
   startingMax: Record<string, number>;
+  /**
+   * Dates de contrôle annoncées dans les consignes de semaine (« Samedi 10
+   * octobre : Contrôle n°1 »). Vide quand le document n'en énonce aucune ; le
+   * seed se rabat alors sur `CHECKPOINT_DATES`.
+   */
+  checkpoints: string[];
   errors: string[];
   warnings: string[];
 }
@@ -89,9 +103,24 @@ const WEEKDAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "
 const DAY_HEADING = new RegExp(
   `^###\\s+(${WEEKDAYS.join("|")})\\s+(\\d{1,2})\\s+([a-zûéèôîà]+)\\s*(?:[—-]+\\s*(.*))?$`,
 );
+/** « ## Semaine 2 · 31 août – 6 septembre — Bloc 1 — Hypertrophie » */
 const WEEK_HEADING = /^##\s+Semaine\s+(\d{1,2})\s*·\s*(.+?)\s*—\s*(.+)$/;
+/**
+ * « ## Semaine S16 — DELOAD · 21 décembre – 27 décembre »
+ * « ## Semaine S1 (partielle) · 10 septembre – 13 septembre »
+ *
+ * Le nom de bloc passe ici *avant* le séparateur, et le numéro porte un « S ».
+ */
+const WEEK_HEADING_V3 =
+  /^##\s+Semaine\s+S(\d{1,2})\s*(?:\(([^)]*)\))?\s*(?:—\s*([^·]+?))?\s*·\s*(.+)$/;
 const WEEK_ONE_HEADING = /^##\s+\d+\.\s*Semaine 1\s*—\s*(.+)$/;
 const SLOT_HEADING = /^\*\*(MATIN|SOIR)\s*—\s*(.*?)\*\*/;
+/** « **NOYAU — obligatoire (~57 min)** » / « **COMPLÉMENT — si tu as le temps…** » */
+const TIER_HEADING = /^\*\*(NOYAU|COMPL[EÉ]MENT)\b/i;
+
+function isWeekHeading(line: string): boolean {
+  return WEEK_HEADING.test(line) || WEEK_HEADING_V3.test(line) || WEEK_ONE_HEADING.test(line);
+}
 
 function slugify(value: string): string {
   return value
@@ -118,7 +147,12 @@ function partBounds(lines: string[], title: RegExp): { start: number; end: numbe
 }
 
 /** Lit les lignes d'exercice d'un tableau de séance. */
-function readExerciseLines(table: MarkdownTable, errors: string[], context: string): ExerciseLine[] {
+function readExerciseLines(
+  table: MarkdownTable,
+  errors: string[],
+  context: string,
+  optional = false,
+): ExerciseLine[] {
   const lines: ExerciseLine[] = [];
 
   for (const [index, row] of table.rows.entries()) {
@@ -153,6 +187,7 @@ function readExerciseLines(table: MarkdownTable, errors: string[], context: stri
       // En calisthénie la colonne « Charge / repère » porte une indication,
       // pas une charge chiffrée.
       cue: loadRaw !== "" && parseKg(loadRaw) === null ? loadRaw : "",
+      optional,
     });
   }
 
@@ -194,7 +229,7 @@ function readInstruction(lines: string[], from: number, until: number): string {
 function parseProgramPart(
   lines: string[],
   bounds: { start: number; end: number },
-  year: number,
+  toDate: (raw: string) => string | null,
   kind: "ppl" | "calisthenie",
   errors: string[],
 ): { weeks: ProgramWeek[]; days: ProgramDay[] } {
@@ -205,7 +240,7 @@ function parseProgramPart(
   const weekStarts: number[] = [];
   const dayStarts: number[] = [];
   for (let i = bounds.start; i < bounds.end; i++) {
-    if (WEEK_HEADING.test(lines[i]) || WEEK_ONE_HEADING.test(lines[i])) weekStarts.push(i);
+    if (isWeekHeading(lines[i])) weekStarts.push(i);
     if (DAY_HEADING.test(lines[i])) dayStarts.push(i);
   }
 
@@ -220,8 +255,8 @@ function parseProgramPart(
       currentWeek = {
         weekNumber: 1,
         blockName: weekOne[1].replace(/\(.*\)/, "").trim(),
-        startDate: `${year}-08-24`,
-        endDate: `${year}-08-30`,
+        startDate: toDate("24 août"),
+        endDate: toDate("30 août"),
         instruction: readInstruction(lines, i, nextWeek),
       };
       weeks.push(currentWeek);
@@ -236,8 +271,25 @@ function parseProgramPart(
       currentWeek = {
         weekNumber: Number(numberRaw),
         blockName: blockName.replace(/—/g, "-").trim(),
-        startDate: parseFrenchDate(startRaw, year),
-        endDate: parseFrenchDate(endRaw, year),
+        startDate: toDate(startRaw),
+        endDate: toDate(endRaw),
+        instruction: readInstruction(lines, i, nextWeek),
+      };
+      weeks.push(currentWeek);
+      continue;
+    }
+
+    const weekV3 = line.match(WEEK_HEADING_V3);
+    if (weekV3) {
+      const [, numberRaw, parenthetical, blockName, dateRange] = weekV3;
+      const [startRaw, endRaw] = dateRange.split(/[–-]/).map((part) => part.trim());
+      const nextWeek = weekStarts.find((index) => index > i) ?? bounds.end;
+      currentWeek = {
+        weekNumber: Number(numberRaw),
+        // La plupart des semaines n'annoncent pas de bloc ; DELOAD et TEST si.
+        blockName: (blockName ?? parenthetical ?? "").replace(/—/g, "-").trim(),
+        startDate: toDate(startRaw),
+        endDate: toDate(endRaw),
         instruction: readInstruction(lines, i, nextWeek),
       };
       weeks.push(currentWeek);
@@ -248,7 +300,7 @@ function parseProgramPart(
     if (!dayMatch) continue;
 
     const [, weekday, dayNumber, monthName, tail] = dayMatch;
-    const date = parseFrenchDate(`${dayNumber} ${monthName}`, year);
+    const date = toDate(`${dayNumber} ${monthName}`);
     if (!date) {
       errors.push(`Date illisible : « ${line.trim()} »`);
       continue;
@@ -272,11 +324,36 @@ function parseProgramPart(
 
     if (!isRestDay) {
       if (kind === "ppl") {
-        const table = readTable(lines, i + 1, dayEnd);
-        if (table) {
-          sessions.push({ slot: "salle", heading: label, exercises: readExerciseLines(table, errors, context) });
-        } else if (!isTestDay) {
-          errors.push(`${context} : aucun tableau trouvé`);
+        // Deux formats coexistent : un seul tableau par jour (v2), ou un bloc
+        // NOYAU suivi d'un bloc COMPLÉMENT (v3). Les deux produisent une seule
+        // séance prescrite — le complément n'est qu'un ensemble de lignes
+        // marquées optionnelles.
+        const exercises: ExerciseLine[] = [];
+        let tiers = 0;
+
+        for (let j = i + 1; j < dayEnd; j++) {
+          const tier = lines[j].match(TIER_HEADING);
+          if (!tier) continue;
+
+          const optional = /COMPL/i.test(tier[1]);
+          const table = readTable(lines, j + 1, dayEnd);
+          if (!table) {
+            errors.push(`${context} ${tier[1]} : aucun tableau trouvé`);
+            continue;
+          }
+          exercises.push(...readExerciseLines(table, errors, `${context} ${tier[1]}`, optional));
+          tiers += 1;
+          j = table.endLine;
+        }
+
+        if (tiers === 0) {
+          const table = readTable(lines, i + 1, dayEnd);
+          if (table) exercises.push(...readExerciseLines(table, errors, context));
+          else if (!isTestDay) errors.push(`${context} : aucun tableau trouvé`);
+        }
+
+        if (exercises.length > 0) {
+          sessions.push({ slot: "salle", heading: label, exercises });
         }
       } else {
         // Calisthénie : deux blocs, chacun annoncé par un intertitre en gras.
@@ -449,26 +526,57 @@ export function parseProgramme(raw: string, year: number): ParsedProgram {
   const errors: string[] = [];
   const warnings: string[] = [];
 
+  const empty = { weeks: [], days: [] };
+  const nothing: ParsedProgram = {
+    ppl: empty,
+    calisthenie: empty,
+    ladders: [],
+    targets: [],
+    testMetrics: [],
+    startingMax: {},
+    checkpoints: [],
+    errors,
+    warnings,
+  };
+
+  /**
+   * Le mois du premier jour daté sert d'origine au calendrier : c'est lui qui
+   * décide à quelle année appartient « 3 janvier ». Le lire depuis le document
+   * évite de le réintroduire en constante — ce que ce projet paie cher à chaque
+   * fois qu'un second programme arrive.
+   */
+  const firstDay = lines.find((line) => DAY_HEADING.test(line));
+  if (!firstDay) {
+    errors.push("Aucun jour daté dans le document.");
+    return nothing;
+  }
+  const opening = firstDay.match(DAY_HEADING)!;
+  const startMonth = parseFrenchDayMonth(`${opening[2]} ${opening[3]}`)?.month;
+  if (!startMonth) {
+    errors.push(`Premier jour illisible : « ${firstDay.trim()} »`);
+    return nothing;
+  }
+  const toDate = makeCalendar(startMonth, year);
+
   const pplBounds = partBounds(lines, /^#\s+PARTIE 1\s/);
   const caliBounds = partBounds(lines, /^#\s+PARTIE 2\s/);
 
-  if (pplBounds.start === -1) errors.push("Partie 1 (musculation) introuvable.");
-  if (caliBounds.start === -1) errors.push("Partie 2 (calisthénie) introuvable.");
-  if (errors.length > 0) {
-    return {
-      ppl: { weeks: [], days: [] },
-      calisthenie: { weeks: [], days: [] },
-      ladders: [],
-      targets: [],
-      testMetrics: [],
-      startingMax: {},
-      errors,
-      warnings,
-    };
+  // Un document en deux parties (musculation + calisthénie) ou un document qui
+  // n'est *que* de la musculation. Le second n'a pas d'échelles : l'onglet
+  // Calisthénie disparaît alors de lui-même, ce qui est le comportement voulu.
+  if (pplBounds.start === -1 && caliBounds.start === -1) {
+    const whole = { start: 0, end: lines.length };
+    const ppl = parseProgramPart(lines, whole, toDate, "ppl", errors);
+    if (ppl.weeks.length === 0) errors.push("Aucune semaine reconnue dans le document.");
+    return { ...nothing, ppl, checkpoints: readCheckpoints(ppl.weeks, toDate), errors, warnings };
   }
 
-  const ppl = parseProgramPart(lines, pplBounds, year, "ppl", errors);
-  const calisthenie = parseProgramPart(lines, caliBounds, year, "calisthenie", errors);
+  if (pplBounds.start === -1) errors.push("Partie 1 (musculation) introuvable.");
+  if (caliBounds.start === -1) errors.push("Partie 2 (calisthénie) introuvable.");
+  if (errors.length > 0) return nothing;
+
+  const ppl = parseProgramPart(lines, pplBounds, toDate, "ppl", errors);
+  const calisthenie = parseProgramPart(lines, caliBounds, toDate, "calisthenie", errors);
 
   return {
     ppl,
@@ -477,7 +585,27 @@ export function parseProgramme(raw: string, year: number): ParsedProgram {
     targets: parseTargets(lines, caliBounds),
     testMetrics: parseTestMetrics(lines, caliBounds),
     startingMax: parseStartingMax(lines, caliBounds),
+    checkpoints: readCheckpoints(ppl.weeks, toDate),
     errors,
     warnings,
   };
+}
+
+/**
+ * Contrôles énoncés en prose dans les consignes : « Samedi 10 octobre :
+ * Contrôle n°1 », « Dimanche 24 janvier : tests + mesures + photos finales ».
+ * Les lire ici évite de les recopier en constante — la précédente,
+ * `CHECKPOINT_DATES`, datait les contrôles du premier programme et les aurait
+ * imposés au suivant.
+ */
+function readCheckpoints(weeks: ProgramWeek[], toDate: (raw: string) => string | null): string[] {
+  const found = new Set<string>();
+  const pattern = /(\d{1,2}\s+[a-zûéèôîà]+)\s*:\s*(?:contr[ôo]le|tests?\b)/gi;
+  for (const week of weeks) {
+    for (const match of week.instruction.matchAll(pattern)) {
+      const date = toDate(match[1]);
+      if (date) found.add(date);
+    }
+  }
+  return [...found].sort();
 }

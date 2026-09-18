@@ -45,6 +45,12 @@ export interface PrescribedExercise {
   cue: string | null;
   /** Équivalent maison fourni par le programme, pour déplacer la séance. */
   homeAlternative: string | null;
+  /**
+   * Ligne du bloc COMPLÉMENT : prescrite, jamais obligatoire. La sauter ne
+   * dégrade ni l'assiduité ni la progression — le programme la donne comme
+   * finition « les bons jours ».
+   */
+  optional: boolean;
 }
 
 export interface LoggedExercise {
@@ -148,6 +154,7 @@ export async function getDay(date: string): Promise<DaySession[]> {
           restSeconds: schema.programExercises.restSeconds,
           cue: schema.programExercises.cue,
           homeAlternative: schema.programExercises.homeAlternative,
+          optional: schema.programExercises.optional,
         })
         .from(schema.programExercises)
         .innerJoin(schema.exercises, eq(schema.exercises.id, schema.programExercises.exerciseId))

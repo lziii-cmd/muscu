@@ -1,9 +1,18 @@
 # MEMORY.md — Mémoire du projet
 
-Dernière mise à jour : 2026-08-26
+Dernière mise à jour : 2026-09-17
 
 ## CONTEXTE ACTUEL
-- Où on en est : **application multi-comptes**. Le passage d'un compte unique à plusieurs comptes est terminé côté code : table `users`, `user_id` sur 17 tables, 14 index d'unicité re-cadrés sur le compte, toutes les requêtes filtrées côté serveur, écrans *Compte* et *Comptes* (administration). Typecheck, lint, 120 tests et test de fumée au vert ; build de production réussi.
+- **Programme d'Abdou remplacé par la version 3** (« NOYAU 60 min + COMPLÉMENT »), 19 semaines du
+  10 septembre 2026 au 17 janvier 2027, 130 jours, 887 lignes dont 555 de noyau et 332 de
+  complément. L'ancien document est conservé tel quel dans `PROGRAMME-COMPLET.ancien.md` : il décrit
+  le programme encore importé sur Neon. Chaîne vérifiée en local de bout en bout (migration, seed,
+  import) ; **rien n'a été appliqué à Neon**.
+- Reste à faire sur ce remplacement : exporter le journal d'Abdou depuis Neon
+  (`npx tsx scripts/export-user.ts --user abdou`, nécessite `DATABASE_URL_UNPOOLED` dans
+  `.env.local`), puis décider comment remplacer un programme que des séances enregistrées
+  référencent — `db:seed` refusera.
+- Où on en est par ailleurs : **application multi-comptes**. Le passage d'un compte unique à plusieurs comptes est terminé côté code : table `users`, `user_id` sur 17 tables, 14 index d'unicité re-cadrés sur le compte, toutes les requêtes filtrées côté serveur, écrans *Compte* et *Comptes* (administration). Typecheck, lint, 120 tests et test de fumée au vert ; build de production réussi.
 - Dernière fonctionnalité travaillée : **page « Comment faire »** — toutes les fiches d'exécution, par compte. 98 fiches pour Abdou, 55 pour Nourah, couverture complète des deux programmes.
 - Prochaine fonctionnalité prévue : à définir. L'utilisateur a demandé si une **page d'inscription avec génération de programme par un agent IA** était possible ; réponse donnée (oui, avec des réserves sur les allergies, le « plausible mais faux » et l'ouverture de l'inscription), décision non prise.
 - Problèmes ouverts :
@@ -62,6 +71,18 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | `measure_label` libre sur l'exercice | Une corde à sauter se compte en sauts, une course en mètres ; forcer « répétitions » rendrait la saisie absurde | Enum figée |
 | 2026-08-26 | Séances maison exclues de la progression en charge | Consigne explicite du document : « ne compare pas ses performances à celles de la salle, ce sont deux échelles différentes » | Tout mélanger |
 | 2026-08-26 | `react/no-unescaped-entities` désactivée | Interface intégralement en français, l'apostrophe est un caractère courant ; React échappe déjà le JSX | Échapper chaque apostrophe |
+| 2026-09-17 | Le **complément** est un drapeau `optional` sur la ligne d'exercice, pas une seconde séance prescrite | Deux séances par jour auraient fait compter un complément sauté comme une séance manquée, et l'assiduité aurait affiché un décrochage inexistant — alors que le document dit « sauter le complément n'est jamais un échec » | Deux séances, ou deux créneaux |
+| 2026-09-17 | Le décompte de la séance porte sur le **noyau seul** | Une séance dont le noyau est intégralement fait doit pouvoir afficher 5/5 ; compter le complément au dénominateur afficherait 5/8 et se lirait comme un échec | Dénominateur global |
+| 2026-09-17 | Année déduite du **mois de départ** lu dans le document (`makeCalendar`) | Le programme franchit le 31 décembre. Avec une année unique, « 3 janvier » datait de janvier 2026, huit mois *avant* le début du programme — et la date restait plausible | Année en paramètre, ou année en dur |
+| 2026-09-17 | Contrôle des repos par **règle** (compound / isolation / superset) et non par barème positionnel | Le barème `{1:150, 2:120, 3:90, 4a:0, 4b:75}` était juste pour le programme de 2026 et faux pour le suivant : il déclenchait 57 fausses incohérences. La règle, elle, vient du document | Garder le barème et le réécrire à chaque programme |
+| 2026-09-17 | Parseur capable de lire un document **sans parties** (`# PARTIE 1` / `# PARTIE 2`) | Le troisième programme est de la musculation seule. Exiger les deux parties refusait un document pourtant valide | Imposer la structure en deux parties |
+| 2026-09-17 | Échelles, objectifs, métriques et contrôles **exigés seulement si** le document porte une calisthénie | Les réclamer d'un document qui n'en contient pas bloquait un seed correct | Seuils inconditionnels |
+| 2026-09-18 | `seed.ts --remplacer` **détache** le journal au lieu de le perdre | Remplacer un programme que des séances réalisent : on garde date, statut, exercices, charges, et le libellé prescrit passe en `title` ; seul le pointeur vers la prescription disparaît. Sans l'option, le seed refuse et renvoie vers l'export. Répété sur le journal réel rejoué en local : 91/91 lignes identiques | Migration SQL ad hoc, ou programmes cohabitant |
+| 2026-09-18 | `PGLITE_DIR` l'emporte sur `.env.local` (scripts et application) | Sous PowerShell, vider une variable la supprime, et dotenv la recharge depuis le fichier : un essai local visait Neon. Le test de fumée pose `PGLITE_DIR` : il ne peut plus écrire en production | Compter sur des variables vidées |
+| 2026-09-18 | Contrôles lus dans les **consignes** du document (« Samedi 10 octobre : Contrôle n°1 ») | Le document ne les donne qu'en prose ; `CHECKPOINT_DATES` datait ceux du premier programme | Tableau à ajouter au document |
+| 2026-09-18 | `src/lib/targets.ts` supprimé, journal et tests lisent le compte | Deux pages portaient encore 24 août → 20 décembre en dur : le journal aurait coupé les cinq dernières semaines du nouveau programme, calendrier *et* assiduité, sans signe visible | Mettre les constantes à jour |
+| 2026-09-18 | Export forcé en `TZ=UTC` | Le pilote rend une `date` à minuit heure locale : en UTC+1 tout l'export était décalé d'un jour, de façon plausible | Corriger après coup |
+| 2026-09-17 | Ancien document gardé en `PROGRAMME-COMPLET.ancien.md` | Il décrit le programme encore en production sur Neon, et ses 20 fiches d'exécution ; sans dépôt Git sur cette machine, l'écrasement aurait été définitif | Écraser sans archive |
 
 ## CE QUI A ÉTÉ FAIT
 | Date | Fonctionnalité | Statut | Notes |
@@ -124,7 +145,14 @@ Dernière mise à jour : 2026-08-26
 | 2026-08-26 | `.pglite-local/` entré dans un commit (29 Mo) | `.gitignore` ne couvrait que `.pglite/` et `.pglite-smoke/` | Motif élargi à `.pglite*/`, commit corrigé avant publication |
 
 ## POINTS DE VIGILANCE
-- **Le programme est daté et court.** 24 août → 20 décembre 2026. Aucune date en dur dans le code : tout vient de `program_weeks` ou de `src/lib/targets.ts`.
+- **Deux programmes différents portent le même nom de fichier.** `PROGRAMME-COMPLET.md` est
+  désormais la version 3 (10 sept 2026 → 17 janv 2027, noyau + complément, sans calisthénie) ;
+  `PROGRAMME-COMPLET.ancien.md` est celle encore importée sur Neon (24 août → 20 déc 2026, avec
+  calisthénie). Le parseur lit les deux, ce qui est voulu — mais `seed:build` ne lit que le premier.
+- **Le complément ne se compte pas comme le noyau.** Toute nouvelle statistique — assiduité, volume,
+  progression — doit filtrer sur `program_exercises.optional`, sinon une séance faite au complet
+  paraîtra incomplète et une séance sans complément paraîtra ratée.
+- **Le programme est daté et court.** 10 septembre 2026 → 17 janvier 2027, et il franchit l'année : toute lecture de date doit passer par `makeCalendar`, jamais par une année en dur. Aucune date en dur dans le code : tout vient de `program_weeks` ou de `src/lib/targets.ts`.
 - **PGlite est mono-processus.** Arrêter le serveur avant `db:migrate`, `db:seed` ou `npm run users`, sinon les écritures ne sont pas vues. Un `taskkill` brutal sur un serveur qui tient la base la laisse corrompue : supprimer le dossier et la reconstruire.
 - **Toute nouvelle requête doit être filtrée par compte.** Le point d'entrée est `currentUserId()` ; une requête qui l'oublie renvoie les données de tout le monde sans lever d'erreur. Même chose pour tout nouvel index d'unicité, qui doit inclure `user_id`.
 - **Le seed vise un compte.** `npm run db:seed -- --user X` : sans `--user`, il refuse de tourner. Il réécrit le programme de X et ne touche à rien d'autre.

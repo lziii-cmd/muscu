@@ -105,3 +105,15 @@ mouvements différents — l'un vertical, l'autre horizontal.
 | Wall walk (marcher les mains vers le mur) | Wall walk |
 | Mollets assis | Mollets assis |
 | Mollets | Mollets debout |
+| Barre au front ou kickback poulie | Barre au front |
+| Écarté haltères ou pec-deck | Écarté poulie |
+| Shrugs haltères | Shrugs |
+| Shrugs barre ou haltères | Shrugs |
+| Curl concentré ou pupitre | Curl concentré |
+| Pullover haltère ou poulie | Pull-over haltère |
+| Extension poignet + dead hang lesté | Extension poignet |
+| Curl poignet + extension poignet | Curl poignet |
+| Abduction / adduction (machine ou élastique) | Abduction et adduction de hanche |
+| Gainage — hollow rocks + planche | Gainage composé |
+| Gainage — planche + hollow hold | Gainage composé |
+| Gainage — relevés de jambes + gainage latéral | Gainage composé |

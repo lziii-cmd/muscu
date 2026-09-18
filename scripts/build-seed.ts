@@ -37,12 +37,28 @@ if (parsed.errors.length > 0) {
 // ---------------------------------------------------------------------------
 const problems: string[] = [];
 
+/**
+ * La calisthénie est facultative : un document peut n'être que de la
+ * musculation. Elle l'était pour le premier programme, elle ne l'est plus pour
+ * le troisième — d'où l'absence de contrôle qui l'exigerait.
+ */
+const hasCalisthenics = parsed.calisthenie.weeks.length > 0;
+
 for (const [name, part] of [
   ["salle", parsed.ppl],
-  ["calisthénie", parsed.calisthenie],
+  ...(hasCalisthenics ? ([["calisthénie", parsed.calisthenie]] as const) : []),
 ] as const) {
-  if (part.weeks.length !== 17) {
-    problems.push(`${name} : ${part.weeks.length} semaines au lieu de 17`);
+  if (part.weeks.length === 0) {
+    problems.push(`${name} : aucune semaine`);
+  }
+
+  // Les semaines doivent se suivre : un trou signale une semaine non reconnue,
+  // et le programme afficherait un vide là où il devrait prescrire.
+  const numbers = part.weeks.map((w) => w.weekNumber);
+  for (let i = 1; i < numbers.length; i++) {
+    if (numbers[i] !== numbers[i - 1] + 1) {
+      problems.push(`${name} : saut de semaine, S${numbers[i - 1]} puis S${numbers[i]}`);
+    }
   }
 
   const seen = new Set<string>();
@@ -59,20 +75,40 @@ for (const [name, part] of [
   }
 }
 
-// Structure des 60 minutes : repos imposés par position, semaines 2 à 17.
-const EXPECTED_REST: Record<string, number> = { "1": 150, "2": 120, "3": 90, "4a": 0, "4b": 75 };
+/*
+ * Structure de la séance, énoncée par le document lui-même : « compounds 2 à
+ * 2 min 30 · isolation 45 s à 1 min · superset (a → b) enchaîné sans repos ».
+ *
+ * Le contrôle porte sur cette règle et non sur un barème par numéro de ligne :
+ * un barème positionnel était juste pour un programme et faux pour le suivant,
+ * exactement le travers que ce projet paie à chaque nouveau document. Ce qui
+ * reste vérifié, c'est qu'un repos existe, qu'il tient dans une séance d'une
+ * heure, et que le premier membre d'un superset s'enchaîne bien sans pause.
+ */
+const COMPOUND_REST_MIN = 120;
+const ISOLATION_REST_MAX = 90;
 for (const day of parsed.ppl.days) {
-  if (day.weekNumber < 2 || day.isRestDay) continue;
+  if (day.isRestDay) continue;
   for (const session of day.sessions) {
     for (const exercise of session.exercises) {
-      const expected = EXPECTED_REST[exercise.order];
-      if (expected !== undefined && exercise.restSeconds !== expected) {
-        problems.push(
-          `salle ${day.date} #${exercise.order} : repos ${exercise.restSeconds}s au lieu de ${expected}s`,
-        );
+      const where = `salle ${day.date} #${exercise.order} ${exercise.name}`;
+      const rest = exercise.restSeconds;
+
+      if (rest === null) {
+        problems.push(`${where} : repos illisible « ${exercise.restRaw} »`);
+      } else if (/^\d+a$/.test(exercise.order)) {
+        // Premier membre d'un superset : il s'enchaîne, le repos vient après b.
+        if (rest !== 0) problems.push(`${where} : superset, repos ${rest}s au lieu de 0`);
+      } else if (exercise.order === "1" || exercise.order === "2") {
+        if (rest < COMPOUND_REST_MIN) {
+          problems.push(`${where} : compound à ${rest}s, moins de ${COMPOUND_REST_MIN}s`);
+        }
+      } else if (rest === 0 || rest > ISOLATION_REST_MAX) {
+        problems.push(`${where} : repos ${rest}s hors de 1–${ISOLATION_REST_MAX}s`);
       }
+
       if (exercise.homeAlternative === "") {
-        problems.push(`salle ${day.date} ${exercise.name} : alternative maison manquante`);
+        problems.push(`${where} : alternative maison manquante`);
       }
     }
   }
@@ -106,19 +142,56 @@ if (mondayOffsets && thursdayOffsets) {
   }
 }
 
-if (parsed.ladders.length < 5) problems.push(`${parsed.ladders.length} échelles seulement`);
-if (parsed.targets.length < 5) problems.push(`${parsed.targets.length} objectifs seulement`);
-if (parsed.testMetrics.length < 5) problems.push(`${parsed.testMetrics.length} métriques seulement`);
+// Échelles, objectifs et métriques appartiennent à la calisthénie : les exiger
+// d'un document qui n'en contient pas refuserait un programme pourtant valide.
+if (hasCalisthenics) {
+  if (parsed.ladders.length < 5) problems.push(`${parsed.ladders.length} échelles seulement`);
+  if (parsed.targets.length < 5) problems.push(`${parsed.targets.length} objectifs seulement`);
+  if (parsed.testMetrics.length < 5) problems.push(`${parsed.testMetrics.length} métriques seulement`);
+}
 
 if (problems.length > 0) {
   problems.slice(0, 20).forEach((p) => console.error("  INCOHÉRENCE :", p));
   fail(`${problems.length} incohérence(s) détectée(s). Seed non écrit.`);
 }
 
+/*
+ * Cellules qui empilent deux prescriptions : « 3 × 20 / 3 × 45 s » décrit des
+ * hollow rocks *et* une planche. Le volume n'ayant qu'un jeu de colonnes, la
+ * seconde est retenue et la première disparaît — silencieusement, avec une
+ * valeur qui reste plausible. Non bloquant : le document a le droit de grouper
+ * deux mouvements sur une ligne. Mais il faut le voir, pas le découvrir en
+ * salle.
+ */
+const composite = new Map<string, { raw: string; count: number }>();
+for (const day of parsed.ppl.days) {
+  for (const session of day.sessions) {
+    for (const exercise of session.exercises) {
+      if (!/\d\s*[×x]\s*\d[^/]*\/\s*\d\s*[×x]/.test(exercise.volume.raw)) continue;
+      const entry = composite.get(exercise.name);
+      if (entry) entry.count += 1;
+      else composite.set(exercise.name, { raw: exercise.volume.raw, count: 1 });
+    }
+  }
+}
+if (composite.size > 0) {
+  console.warn(`\n⚠ ${composite.size} exercice(s) portent deux prescriptions dans une seule cellule.`);
+  console.warn("  Seule la seconde est enregistrée. À scinder en deux lignes si les deux comptent :");
+  for (const [name, { raw, count }] of composite) {
+    console.warn(`   · ${name} — « ${raw} » (${count} occurrences)`);
+  }
+  console.warn("");
+}
+
 // ---------------------------------------------------------------------------
 // Écriture
 // ---------------------------------------------------------------------------
 mkdirSync("data/seed", { recursive: true });
+
+// Bornes réelles du programme, lues depuis les jours — pas depuis une constante.
+const allDates = [...parsed.ppl.days, ...parsed.calisthenie.days].map((day) => day.date).sort();
+const programStart = allDates[0] ?? "";
+const programEnd = allDates[allDates.length - 1] ?? "";
 
 /*
  * Fiches d'exécution : une par exercice du programme. Le document du compte
@@ -149,7 +222,15 @@ writeFileSync(
       generatedAt: new Date().toISOString(),
       year: YEAR,
       source: SOURCE,
-      checkpointDates: CHECKPOINT_DATES,
+      /*
+       * Les contrôles physiques ne valent que s'ils tombent pendant le
+       * programme. Les émettre tels quels daterait de septembre 2026 des
+       * contrôles pour un programme qui court jusqu'en janvier 2027.
+       */
+      checkpointDates:
+        parsed.checkpoints.length > 0
+          ? parsed.checkpoints
+          : CHECKPOINT_DATES.filter((date) => date >= programStart && date <= programEnd),
       /*
        * Les programmes sont listés plutôt que nommés en dur : chaque personne
        * n'a pas le même découpage. Nourah en a un seul, à domicile ; le
@@ -163,13 +244,19 @@ writeFileSync(
           weeks: parsed.ppl.weeks,
           days: parsed.ppl.days,
         },
-        {
-          code: "calisthenie",
-          name: "Calisthénie",
-          defaultSlot: "matin",
-          weeks: parsed.calisthenie.weeks,
-          days: parsed.calisthenie.days,
-        },
+        // Un programme vide n'est pas un programme : l'omettre fait disparaître
+        // l'onglet, là où un onglet vide se lirait comme une panne.
+        ...(hasCalisthenics
+          ? [
+              {
+                code: "calisthenie",
+                name: "Calisthénie",
+                defaultSlot: "matin",
+                weeks: parsed.calisthenie.weeks,
+                days: parsed.calisthenie.days,
+              },
+            ]
+          : []),
       ],
       guides,
       ladders: parsed.ladders,
@@ -228,16 +315,17 @@ function writeDays(days: ProgramDay[], weekNumber: number, withHome: boolean) {
       }
       out.push(
         withHome
-          ? "| # | Exercice | Séries × reps | Charge | Haltères | Repos | Alternative maison |"
+          ? "| # | Exercice | Bloc | Séries × reps | Charge | Haltères | Repos | Alternative maison |"
           : "| Exercice | Volume | Repère | Repos |",
       );
-      out.push(withHome ? "|---|---|---|---|---|---|---|" : "|---|---|---|---|");
+      out.push(withHome ? "|---|---|---|---|---|---|---|---|" : "|---|---|---|---|");
 
       for (const e of session.exercises) {
         const rest = e.restSeconds === 0 ? "enchaîner" : e.restSeconds === null ? "—" : `${e.restSeconds} s`;
+        const tier = e.optional ? "complément" : "noyau";
         out.push(
           withHome
-            ? `| ${e.order} | ${e.name} | ${volumeLabel(e.volume)} | ${e.loadRaw || "—"} | ${e.dumbbellRaw || "—"} | ${rest} | ${e.homeAlternative || "—"} |`
+            ? `| ${e.order} | ${e.name} | ${tier} | ${volumeLabel(e.volume)} | ${e.loadRaw || "—"} | ${e.dumbbellRaw || "—"} | ${rest} | ${e.homeAlternative || "—"} |`
             : `| ${e.name} | ${volumeLabel(e.volume)} | ${e.cue || "—"} | ${rest} |`,
         );
       }
@@ -256,17 +344,19 @@ for (const week of parsed.ppl.weeks) {
   writeDays(parsed.ppl.days, week.weekNumber, true);
 }
 
-out.push("## Programme de calisthénie");
-out.push("");
-for (const week of parsed.calisthenie.weeks) {
-  out.push(`### Semaine ${week.weekNumber} — ${week.blockName}`);
-  out.push(`_${week.startDate} → ${week.endDate}_`);
-  if (week.instruction) out.push(`> ${week.instruction}`);
+if (hasCalisthenics) {
+  out.push("## Programme de calisthénie");
   out.push("");
-  writeDays(parsed.calisthenie.days, week.weekNumber, false);
+  for (const week of parsed.calisthenie.weeks) {
+    out.push(`### Semaine ${week.weekNumber} — ${week.blockName}`);
+    out.push(`_${week.startDate} → ${week.endDate}_`);
+    if (week.instruction) out.push(`> ${week.instruction}`);
+    out.push("");
+    writeDays(parsed.calisthenie.days, week.weekNumber, false);
+  }
 }
 
-out.push("## Échelles de progression");
+if (parsed.ladders.length > 0) out.push("## Échelles de progression");
 out.push("");
 for (const ladder of parsed.ladders) {
   out.push(`### ${ladder.name} — départ au niveau ${ladder.startLevel}`);
@@ -280,22 +370,26 @@ for (const ladder of parsed.ladders) {
   out.push("");
 }
 
-out.push("## Objectifs jalonnés");
-out.push("");
-out.push("| Mouvement | Départ | 19 sept | 17 oct | 14 nov | 19 déc |");
-out.push("|---|---|---|---|---|---|");
-for (const target of parsed.targets) {
-  const cells = Object.values(target.byDate).map((value) =>
-    value === null ? "—" : `${value}${target.unit === "seconds" ? " s" : ""}`,
-  );
-  out.push(`| ${target.movement} | ${target.startLabel} | ${cells.join(" | ")} |`);
+if (parsed.targets.length > 0) {
+  out.push("## Objectifs jalonnés");
+  out.push("");
+  out.push("| Mouvement | Départ | 19 sept | 17 oct | 14 nov | 19 déc |");
+  out.push("|---|---|---|---|---|---|");
+  for (const target of parsed.targets) {
+    const cells = Object.values(target.byDate).map((value) =>
+      value === null ? "—" : `${value}${target.unit === "seconds" ? " s" : ""}`,
+    );
+    out.push(`| ${target.movement} | ${target.startLabel} | ${cells.join(" | ")} |`);
+  }
+  out.push("");
 }
-out.push("");
 
-out.push("## Métriques des 4 tests");
-out.push("");
-for (const metric of parsed.testMetrics) out.push(`- ${metric.label}`);
-out.push("");
+if (parsed.testMetrics.length > 0) {
+  out.push("## Métriques des 4 tests");
+  out.push("");
+  for (const metric of parsed.testMetrics) out.push(`- ${metric.label}`);
+  out.push("");
+}
 
 writeFileSync("data/seed/REVUE.md", out.join("\n"), "utf8");
 
@@ -316,4 +410,7 @@ console.log(
 );
 console.log(`  Objectifs    : ${parsed.targets.length} · Métriques : ${parsed.testMetrics.length}`);
 console.log(`  Max de départ : ${JSON.stringify(parsed.startingMax)}`);
+console.log(
+  `  Contrôles    : ${parsed.checkpoints.length > 0 ? parsed.checkpoints.join(", ") : "(repli sur les dates par défaut)"}`,
+);
 console.log("\n  Relis data/seed/REVUE.md avant d'importer.");

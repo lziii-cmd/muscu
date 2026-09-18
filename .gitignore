@@ -47,5 +47,8 @@ next-env.d.ts
 # Texte extrait des PDF sources, reconstructible
 /data/extraits/
 
+# Exports de comptes : journal réel, mots de passe hachés. Jamais publiés.
+/data/export/
+
 # Configuration locale de lancement
 .claude/

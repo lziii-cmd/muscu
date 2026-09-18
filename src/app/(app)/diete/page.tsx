@@ -145,7 +145,7 @@ export default async function DietePage() {
             </li>
             <li>
               <strong className="text-text">Le repas de 20h est obligatoire.</strong> Complet, glucides
-              inclus, 2 à 3 h avant la séance de 23h. Arriver à jeun ne fonctionne pas.
+              inclus, 2 à 3 h avant la séance de 22h. Arriver à jeun ne fonctionne pas.
             </li>
             <li>
               <strong className="text-text">La règle de minuit.</strong> Après la séance : léger et
@@ -153,7 +153,7 @@ export default async function DietePage() {
             </li>
             <li>
               <strong className="text-text">Aucun stimulant après 19h.</strong> La caféine a 5 à 6 h de
-              demi-vie et ta séance est à 23h.
+              demi-vie et ta séance est à 22h.
             </li>
           </ul>
         </Card>
