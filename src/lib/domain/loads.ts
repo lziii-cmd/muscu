@@ -52,6 +52,40 @@ export interface LoadSuggestion {
   /** Nombre à afficher dans le champ, dans l'unité `weightUnit`. Vide si rien. */
   weight: string;
   weightUnit: WeightUnit;
+  /** Vrai quand la valeur est convertie d'un autre type : à ajuster dès la 1re série. */
+  estimated?: boolean;
+}
+
+/**
+ * Part portée par UN haltère face à la même charge à la barre.
+ *
+ * Deux haltères de 16 kg ne remplacent pas une barre de 32 kg : chaque bras
+ * stabilise seul, et la charge tenable par main est plus basse. 40 % est le
+ * rapport usuel sur les mouvements de poussée et de tirage — un point de
+ * départ à corriger dès la première série, pas une équivalence exacte.
+ */
+export const DUMBBELL_SHARE = 0.4;
+
+/**
+ * Arrondi au matériel : les disques vont de 2,5 en 2,5 kg, les haltères se
+ * suivent au kilo (14, 16, 18…). Arrondir un haltère au pas des disques
+ * proposait 15 kg là où le râtelier a un 16.
+ */
+const toStep = (kg: number, unit: LoadUnit) =>
+  unit === "kg_par_haltere" ? Math.round(kg) : Math.round(kg / 2.5) * 2.5;
+
+/**
+ * Convertit une charge d'un type vers un autre, pour proposer quelque chose
+ * quand le programme ne dit rien de ce type. Barre et machine sont traitées à
+ * l'identique : aucune règle honnête ne les relie, les machines ne se valant
+ * même pas entre elles.
+ */
+export function convertLoad(kg: number, from: LoadUnit, to: LoadUnit): number | null {
+  if (from === "poids_du_corps" || to === "poids_du_corps") return null;
+  if (from === to) return kg;
+  if (to === "kg_par_haltere") return toStep(kg * DUMBBELL_SHARE, to);
+  if (from === "kg_par_haltere") return toStep(kg / DUMBBELL_SHARE, to);
+  return kg;
 }
 
 /** Nombre saisi → kilos, arrondis au centième (précision de la colonne). */
@@ -151,7 +185,27 @@ export function suggestLoad(source: LoadSource, unit?: LoadUnit): LoadSuggestion
   if (habitual && habitual.loadUnit === unit) {
     return { loadUnit: unit, weight: text(habitual.weightKg, habitual.weightUnit), weightUnit: habitual.weightUnit };
   }
-  return { loadUnit: unit, weight: text(prescribedFor(source, unit), "kg"), weightUnit: "kg" };
+
+  const prescribed = prescribedFor(source, unit);
+  if (prescribed !== null) return { loadUnit: unit, weight: text(prescribed, "kg"), weightUnit: "kg" };
+
+  /*
+   * Rien pour ce type : on convertit ce qu'on connaît plutôt que de vider le
+   * champ. Ce qui a été soulevé passe avant ce qui est prescrit.
+   */
+  const known: { kg: number; from: LoadUnit } | null =
+    habitual?.weightKg != null && habitual.loadUnit !== "poids_du_corps"
+      ? { kg: habitual.weightKg, from: habitual.loadUnit }
+      : source.loadKg !== null
+        ? { kg: source.loadKg, from: barOrMachine(source.name, source.equipment) }
+        : source.dumbbellKg !== null
+          ? { kg: source.dumbbellKg, from: "kg_par_haltere" }
+          : null;
+
+  const converted = known === null ? null : convertLoad(known.kg, known.from, unit);
+  return converted === null
+    ? { loadUnit: unit, weight: "", weightUnit: "kg" }
+    : { loadUnit: unit, weight: text(converted, "kg"), weightUnit: "kg", estimated: true };
 }
 
 /** Libellé court d'une charge : « 27,5 kg », « 50 lb », « 12 kg / haltère », « PDC ». */

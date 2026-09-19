@@ -153,6 +153,11 @@ interface EntryState {
   /** Unité du nombre saisi dans `weightKg` (le nom du champ est historique). */
   weightUnit: WeightUnit;
   /**
+   * Charge convertie depuis un autre type, faute de mieux : à ajuster dès la
+   * première série. Retombe à faux dès que la personne saisit un nombre.
+   */
+  estimated?: boolean;
+  /**
    * Séries validées d'un toucher sur l'icône. Facultatif : un brouillon écrit
    * avant son introduction ne le porte pas, il se déduit alors de `done`.
    */
@@ -449,6 +454,7 @@ export function SessionScreen({
           const suggestion = suggestLoad(exercise, patch.loadUnit);
           next.weightKg = suggestion.weight;
           next.weightUnit = suggestion.weightUnit;
+          next.estimated = suggestion.estimated ?? false;
         }
       }
       return { ...current, [id]: next };
@@ -988,7 +994,7 @@ export function SessionScreen({
                                 inputMode="decimal"
                                 value={entry.weightKg}
                                 onChange={(event) =>
-                                  update(exercise.id, { weightKg: event.target.value })
+                                  update(exercise.id, { weightKg: event.target.value, estimated: false })
                                 }
                                 placeholder={entry.weightUnit ?? "kg"}
                                 className="tap w-20 rounded-lg border border-border bg-raised px-2 text-center text-base tabular-nums outline-none focus:border-accent"
@@ -998,7 +1004,12 @@ export function SessionScreen({
                                 onChange={(weightUnit) => update(exercise.id, { weightUnit })}
                                 label={exercise.name}
                               />
-                              <LoadHint weight={entry.weightKg} loadUnit={entry.loadUnit} weightUnit={entry.weightUnit ?? "kg"} />
+                              <LoadHint
+                                weight={entry.weightKg}
+                                loadUnit={entry.loadUnit}
+                                weightUnit={entry.weightUnit ?? "kg"}
+                                estimated={entry.estimated}
+                              />
                             </label>
                           ) : null}
 
@@ -1576,10 +1587,22 @@ function WeightUnitToggle({
 }
 
 /** « par haltère » pour les haltères, et l'équivalent en kilos d'une saisie en livres. */
-function LoadHint({ weight, loadUnit, weightUnit }: { weight: string; loadUnit: LoadUnit; weightUnit: WeightUnit }) {
+function LoadHint({
+  weight,
+  loadUnit,
+  weightUnit,
+  estimated,
+}: {
+  weight: string;
+  loadUnit: LoadUnit;
+  weightUnit: WeightUnit;
+  estimated?: boolean;
+}) {
   const typed = parseWeight(weight);
   const parts: string[] = [];
   if (loadUnit === "kg_par_haltere") parts.push("par haltère");
+  // Une charge convertie d'un autre type est un point de départ, pas une mesure.
+  if (estimated) parts.push("estimation, ajuste à la 1re série");
   if (weightUnit === "lb" && typed !== null) parts.push(`≈ ${String(fromKg(toKg(typed, "lb"), "kg")).replace(".", ",")} kg`);
   if (parts.length === 0) return null;
   return <span className="text-xs text-faint">{parts.join(" · ")}</span>;

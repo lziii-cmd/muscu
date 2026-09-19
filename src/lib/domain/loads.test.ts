@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { adaptFromLast, barOrMachine, formatLoad, fromKg, parseWeight, suggestLoad, toKg, type LoadSource } from "./loads";
+import {
+  adaptFromLast,
+  barOrMachine,
+  convertLoad,
+  formatLoad,
+  fromKg,
+  parseWeight,
+  suggestLoad,
+  toKg,
+  type LoadSource,
+} from "./loads";
 
 const bench: LoadSource = { name: "Développé couché barre", equipment: "barre", loadKg: 30, dumbbellKg: 12 };
 
@@ -67,11 +77,17 @@ describe("charge proposée", () => {
     expect(suggestLoad(source, "barre").weight).toBe("30");
   });
 
-  it("laisse le champ vide au poids du corps, et quand le programme n'a rien pour ce type", () => {
+  it("laisse le champ vide au poids du corps, et estime les autres types", () => {
     expect(suggestLoad(bench, "poids_du_corps").weight).toBe("");
     const lateral: LoadSource = { name: "Élévations latérales", equipment: "haltere", loadKg: null, dumbbellKg: 5 };
     expect(suggestLoad(lateral)).toEqual({ loadUnit: "kg_par_haltere", weight: "5", weightUnit: "kg" });
-    expect(suggestLoad(lateral, "machine").weight).toBe("");
+    // 5 kg par haltère : une machine équivalente se règle autour de 12,5 kg.
+    expect(suggestLoad(lateral, "machine")).toEqual({
+      loadUnit: "machine",
+      weight: "12.5",
+      weightUnit: "kg",
+      estimated: true,
+    });
   });
 
   it("sans charge au programme, choisit le type d'après l'exercice et laisse le champ vide", () => {
@@ -92,6 +108,42 @@ describe("charge proposée", () => {
     expect(suggestLoad({ ...none, name: "Marche rapide ou vélo — 20 min en continu", equipment: "autre" }).loadUnit).toBe(
       "poids_du_corps",
     );
+  });
+
+  it("propose une charge pour chaque type, convertie quand le programme n'en donne pas", () => {
+    // Le programme ne chiffre que la barre : les haltères et la machine sont estimés.
+    const barre: LoadSource = { name: "Développé couché barre", equipment: "barre", loadKg: 40, dumbbellKg: null };
+    expect(suggestLoad(barre, "kg_par_haltere")).toEqual({
+      loadUnit: "kg_par_haltere",
+      weight: "16",
+      weightUnit: "kg",
+      estimated: true,
+    });
+    expect(suggestLoad(barre, "machine").weight).toBe("40");
+    expect(suggestLoad(barre, "barre").estimated).toBeUndefined();
+
+    // Et dans l'autre sens, depuis ce qui a été soulevé aux haltères.
+    const habituelle: LoadSource = {
+      name: "Développé militaire haltères assis",
+      equipment: "haltere",
+      loadKg: null,
+      dumbbellKg: null,
+      habitual: { loadUnit: "kg_par_haltere", weightKg: 16, weightUnit: "kg" },
+    };
+    expect(suggestLoad(habituelle, "barre")).toEqual({
+      loadUnit: "barre",
+      weight: "40",
+      weightUnit: "kg",
+      estimated: true,
+    });
+    expect(suggestLoad(habituelle, "poids_du_corps").weight).toBe("");
+  });
+
+  it("arrondit l'estimation au pas des disques", () => {
+    expect(convertLoad(27.5, "barre", "kg_par_haltere")).toBe(11);
+    expect(convertLoad(10, "kg_par_haltere", "barre")).toBe(25);
+    expect(convertLoad(30, "machine", "barre")).toBe(30);
+    expect(convertLoad(30, "barre", "poids_du_corps")).toBeNull();
   });
 
   it("ignore une habitude à l'ancien type confondu barre/machine", () => {
