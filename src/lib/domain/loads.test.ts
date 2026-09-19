@@ -74,6 +74,26 @@ describe("charge proposée", () => {
     expect(suggestLoad(lateral, "machine").weight).toBe("");
   });
 
+  it("sans charge au programme, choisit le type d'après l'exercice et laisse le champ vide", () => {
+    const none = { loadKg: null, dumbbellKg: null };
+    expect(suggestLoad({ ...none, name: "Développé couché barre", equipment: "barre" })).toEqual({
+      loadUnit: "barre",
+      weight: "",
+      weightUnit: "kg",
+    });
+    expect(suggestLoad({ ...none, name: "Développé incliné haltères", equipment: "haltere" }).loadUnit).toBe(
+      "kg_par_haltere",
+    );
+    expect(suggestLoad({ ...none, name: "Tirage horizontal poulie", equipment: "poulie" }).loadUnit).toBe("machine");
+    expect(suggestLoad({ ...none, name: "Hip thrust", equipment: "autre" }).loadUnit).toBe("barre");
+    expect(suggestLoad({ ...none, name: "Traction (ou négative si max < 3)", equipment: "poids_du_corps" }).loadUnit).toBe(
+      "poids_du_corps",
+    );
+    expect(suggestLoad({ ...none, name: "Marche rapide ou vélo — 20 min en continu", equipment: "autre" }).loadUnit).toBe(
+      "poids_du_corps",
+    );
+  });
+
   it("ignore une habitude à l'ancien type confondu barre/machine", () => {
     const s = suggestLoad({ ...bench, habitual: { loadUnit: "barre_machine", weightKg: 99, weightUnit: "kg" } });
     expect(s.weight).toBe("30");

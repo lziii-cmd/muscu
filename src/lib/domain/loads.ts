@@ -91,6 +91,23 @@ export function barOrMachine(name: string, equipment: string | null): "barre" | 
   return "barre";
 }
 
+/**
+ * Type de charge d'un exercice dont le programme ne chiffre rien (« Série
+ * test », « Modéré ») : il se lit sur le matériel, à défaut sur le nom.
+ * Sans cela l'écran tombait sur « poids du corps » et masquait le champ de
+ * charge d'un développé couché.
+ */
+export function defaultLoadUnit(name: string, equipment: string | null): LoadUnit {
+  const n = name.toLowerCase();
+  if (equipment === "poids_du_corps") return "poids_du_corps";
+  // « vélo » en mot entier : sans les bornes, il mordrait dans « dé-velo-ppé ».
+  if (/marche|\bv[ée]lo\b|mobilit|[ée]tirement|circuit|gainage|planche|hollow|pompes|traction|dips|dead hang/.test(n)) {
+    return "poids_du_corps";
+  }
+  if (equipment === "haltere" || /halt[eè]re/.test(n)) return "kg_par_haltere";
+  return barOrMachine(name, equipment);
+}
+
 const text = (kg: number | null, unit: WeightUnit): string =>
   kg === null ? "" : String(fromKg(kg, unit));
 
@@ -127,7 +144,8 @@ export function suggestLoad(source: LoadSource, unit?: LoadUnit): LoadSuggestion
     if (source.dumbbellKg !== null) {
       return { loadUnit: "kg_par_haltere", weight: text(source.dumbbellKg, "kg"), weightUnit: "kg" };
     }
-    return { loadUnit: "poids_du_corps", weight: "", weightUnit: "kg" };
+    // Rien de chiffré : le bon type, champ vide, la série test fixera la charge.
+    return { loadUnit: defaultLoadUnit(source.name, source.equipment), weight: "", weightUnit: "kg" };
   }
 
   if (habitual && habitual.loadUnit === unit) {

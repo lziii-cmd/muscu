@@ -248,7 +248,9 @@ function missedLabel(reason: string | null | undefined): string | null {
 
 function prescribedLoad(exercise: { loadRaw: string | null; dumbbellRaw: string | null }): string {
   const barre = exercise.loadRaw && exercise.loadRaw !== "--" ? exercise.loadRaw : "";
-  if (barre !== "") return ` · prévu ${barre}`;
+  // Une charge chiffrée est « prévue » ; « Série test » ou « Modéré » sont des
+  // repères, pas des charges : « prévu Série test » ne voulait rien dire.
+  if (barre !== "") return /\d/.test(barre) ? ` · prévu ${barre}` : ` · repère : ${barre}`;
 
   const haltere = exercise.dumbbellRaw && exercise.dumbbellRaw !== "--" ? exercise.dumbbellRaw : "";
   if (haltere !== "") return ` · prévu ${haltere} par haltère`;
@@ -258,6 +260,11 @@ function prescribedLoad(exercise: { loadRaw: string | null; dumbbellRaw: string 
 
 function prescriptionLabel(exercise: PrescribedExercise, pullupMax: number): string {
   if (exercise.maxOffset !== null) {
+    // Seul le max de tractions est connu de l'application : l'appliquer aux
+    // pompes donnait « 3 × 1 » à quelqu'un qui en fait vingt.
+    if (!/traction/i.test(exercise.name)) {
+      return `${exercise.sets ?? "?"} × (ton max − ${exercise.maxOffset})`;
+    }
     const reps = repsForMax(pullupMax, exercise.maxOffset);
     return `${exercise.sets ?? "?"} × ${reps} (max ${pullupMax} − ${exercise.maxOffset})`;
   }
@@ -955,6 +962,16 @@ export function SessionScreen({
 
                         {location === "salle" && exercise.habitual?.reason ? (
                           <p className="mt-0.5 text-xs text-accent">{exercise.habitual.reason}</p>
+                        ) : location === "salle" &&
+                          !exercise.habitual &&
+                          exercise.loadKg === null &&
+                          exercise.dumbbellKg === null &&
+                          entry.loadUnit !== "poids_du_corps" ? (
+                          // Aucune charge connue : c'est la première fois. La série
+                          // test la fixe, et la séance suivante partira de là.
+                          <p className="mt-0.5 text-xs text-accent">
+                            Série test : trouve ta charge à la 1re série (2–3 reps en réserve), puis note-la.
+                          </p>
                         ) : null}
 
                         {location === "salle" && exercise.homeAlternative ? (
