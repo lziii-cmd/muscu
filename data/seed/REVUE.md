@@ -1,6 +1,6 @@
 # Revue du programme importé
 
-Généré le 2026-09-18 depuis `PROGRAMME-COMPLET.md`.
+Généré le 2026-09-19 depuis `PROGRAMME-COMPLET.md`.
 
 À relire avant `npm run db:seed`, en particulier les **charges** et les
 **alternatives maison**. Une valeur fausse ici te ferait charger la mauvaise barre.

@@ -115,8 +115,16 @@ const WEEK_HEADING_V3 =
   /^##\s+Semaine\s+S(\d{1,2})\s*(?:\(([^)]*)\))?\s*(?:—\s*([^·]+?))?\s*·\s*(.+)$/;
 const WEEK_ONE_HEADING = /^##\s+\d+\.\s*Semaine 1\s*—\s*(.+)$/;
 const SLOT_HEADING = /^\*\*(MATIN|SOIR)\s*—\s*(.*?)\*\*/;
-/** « **NOYAU — obligatoire (~57 min)** » / « **COMPLÉMENT — si tu as le temps…** » */
-const TIER_HEADING = /^\*\*(NOYAU|COMPL[EÉ]MENT)\b/i;
+/**
+ * « **NOYAU — obligatoire (~57 min)** » / « **COMPLÉMENT — si tu as le temps…** »,
+ * « **MUSCULATION · NOYAU — …** », et en italique « *Noyau* » / « *Complément* ».
+ */
+const TIER_HEADING = /^\*{1,2}(?:MUSCULATION\s*·\s*)?(NOYAU|COMPL[EÉ]MENT)\b/i;
+/**
+ * « **CALISTHÉNIE — TIRAGE — force** » : dans un jour qui porte aussi la salle,
+ * elle ouvre une seconde séance, faite après la musculation.
+ */
+const CALISTHENICS_PART = /^\*\*CALISTH[ÉE]NIE\s*—\s*(.*?)\*\*/i;
 
 function isWeekHeading(line: string): boolean {
   return WEEK_HEADING.test(line) || WEEK_HEADING_V3.test(line) || WEEK_ONE_HEADING.test(line);
@@ -281,7 +289,10 @@ function parseProgramPart(
 
     const weekV3 = line.match(WEEK_HEADING_V3);
     if (weekV3) {
-      const [, numberRaw, parenthetical, blockName, dateRange] = weekV3;
+      const [, numberRaw, parenthetical, blockBefore, rest] = weekV3;
+      // Le nom de bloc précède le « · » dans un format, suit les dates dans l'autre.
+      const [dateRange, ...after] = rest.split(/\s+—\s+/);
+      const blockName = blockBefore ?? (after.length > 0 ? after.join(" — ") : undefined);
       const [startRaw, endRaw] = dateRange.split(/[–-]/).map((part) => part.trim());
       const nextWeek = weekStarts.find((index) => index > i) ?? bounds.end;
       currentWeek = {
@@ -317,7 +328,8 @@ function parseProgramPart(
     );
 
     const isRestDay = /^repos/i.test(label);
-    const isTestDay = /test/i.test(label);
+    // Jour de test ou de contrôle (mesures, photos) : pas de séance à faire.
+    const isTestDay = /test|contr[ôo]le/i.test(label);
     const context = `${kind} S${currentWeek.weekNumber} ${weekday} ${date}`;
 
     const sessions: DaySession[] = [];
@@ -326,9 +338,20 @@ function parseProgramPart(
       // Un jour découpé en NOYAU / COMPLÉMENT, en salle comme en calisthénie
       // (version 2 du programme de calisthénie : « plus de découpage
       // matin/soir, tout se fait en une seule séance »).
-      let hasTiers = false;
+      // Un titre de section (« ## Comment faire… ») clôt la journée : sans
+      // cette borne, le dernier jour d'une partie avalerait les tableaux de
+      // fiches et de charges qui suivent le programme.
+      let tierEnd = dayEnd;
       for (let j = i + 1; j < dayEnd; j++) {
-        if (TIER_HEADING.test(lines[j])) {
+        if (/^#{1,2}s/.test(lines[j])) {
+          tierEnd = j;
+          break;
+        }
+      }
+
+      let hasTiers = false;
+      for (let j = i + 1; j < tierEnd; j++) {
+        if (TIER_HEADING.test(lines[j]) || CALISTHENICS_PART.test(lines[j])) {
           hasTiers = true;
           break;
         }
@@ -341,20 +364,45 @@ function parseProgramPart(
         // marquées optionnelles.
         const exercises: ExerciseLine[] = [];
         let tiers = 0;
+        // Partie calisthénie du même jour (programmes « salle puis calisthénie »).
+        const evening: ExerciseLine[] = [];
+        let eveningHeading = "";
+        let inEvening = false;
+        let optional = false;
+        let tierName = "NOYAU";
+        // Un tableau n'est lu qu'après un marqueur : un tableau libre dans la
+        // journée (fiches, charges à remplir) n'est pas une séance.
+        let marked = false;
 
-        for (let j = i + 1; j < dayEnd; j++) {
-          const tier = lines[j].match(TIER_HEADING);
-          if (!tier) continue;
-
-          const optional = /COMPL/i.test(tier[1]);
-          const table = readTable(lines, j + 1, dayEnd);
-          if (!table) {
-            errors.push(`${context} ${tier[1]} : aucun tableau trouvé`);
+        for (let j = i + 1; j < tierEnd; j++) {
+          const part = lines[j].match(CALISTHENICS_PART);
+          if (part) {
+            inEvening = true;
+            optional = false;
+            tierName = "NOYAU";
+            eveningHeading = part[1].trim();
+            marked = true;
             continue;
           }
-          exercises.push(...readExerciseLines(table, errors, `${context} ${tier[1]}`, optional));
+          const tier = lines[j].match(TIER_HEADING);
+          if (tier) {
+            optional = /COMPL/i.test(tier[1]);
+            tierName = tier[1].toUpperCase();
+            marked = true;
+            continue;
+          }
+          if (!marked || !lines[j].trimStart().startsWith("|")) continue;
+
+          const table = readTable(lines, j, tierEnd);
+          if (!table) continue;
+          const where = `${context}${inEvening ? " CALISTHÉNIE" : ""} ${tierName}`;
+          (inEvening ? evening : exercises).push(...readExerciseLines(table, errors, where, optional));
           tiers += 1;
-          j = table.endLine;
+          j = table.endLine - 1;
+        }
+
+        if (evening.length > 0) {
+          sessions.push({ slot: "soir", heading: eveningHeading || label, exercises: evening });
         }
 
         if (tiers === 0) {
@@ -579,9 +627,28 @@ export function parseProgramme(raw: string, year: number): ParsedProgram {
   // Calisthénie disparaît alors de lui-même, ce qui est le comportement voulu.
   if (pplBounds.start === -1 && caliBounds.start === -1) {
     const whole = { start: 0, end: lines.length };
-    const ppl = parseProgramPart(lines, whole, toDate, "ppl", errors);
-    if (ppl.weeks.length === 0) errors.push("Aucune semaine reconnue dans le document.");
-    return { ...nothing, ppl, checkpoints: readCheckpoints(ppl.weeks, toDate), errors, warnings };
+    const both = parseProgramPart(lines, whole, toDate, "ppl", errors);
+    if (both.weeks.length === 0) errors.push("Aucune semaine reconnue dans le document.");
+
+    /*
+     * Un jour peut porter la salle puis une calisthénie (« MUSCULATION · … »
+     * puis « CALISTHÉNIE — … »). Les deux deviennent deux programmes, comme
+     * pour un document en deux parties : la salle garde ses séances, la
+     * calisthénie reçoit celles du soir, sur les mêmes semaines.
+     */
+    const only = (slot: DaySession["slot"], keep: boolean) =>
+      both.days.map((day) => ({
+        ...day,
+        sessions: day.sessions.filter((session) => (session.slot === slot) === keep),
+      }));
+    const hasEvening = both.days.some((day) => day.sessions.some((session) => session.slot === "soir"));
+    const ppl = hasEvening ? { weeks: both.weeks, days: only("soir", false) } : both;
+    const calisthenie = hasEvening ? { weeks: both.weeks, days: only("soir", true) } : empty;
+
+    const checkpoints = [
+      ...new Set([...readCheckpoints(both.weeks, toDate), ...readControlSection(lines, toDate)]),
+    ].sort();
+    return { ...nothing, ppl, calisthenie, checkpoints, errors, warnings };
   }
 
   if (pplBounds.start === -1) errors.push("Partie 1 (musculation) introuvable.");
@@ -718,6 +785,23 @@ function readStartingLevel(lines: string[]): Record<string, number> {
     if (movement !== "" && level) result[metricSlug(movement)] = Number(level[1]);
   }
   return result;
+}
+
+/**
+ * Section « ## Les 4 contrôles » : « Samedis **17 octobre · 14 novembre ·
+ * 19 décembre · 16 janvier** — pesée… ». Toutes les dates du paragraphe.
+ */
+function readControlSection(lines: string[], toDate: (raw: string) => string | null): string[] {
+  const start = lines.findIndex((line) => /^##\s+(\d+\.\s*)?Les\s+\d+\s+contr[ôo]les/i.test(line));
+  if (start === -1) return [];
+  const found: string[] = [];
+  for (let i = start + 1; i < lines.length && !/^#{1,3}\s/.test(lines[i]); i++) {
+    for (const match of lines[i].replace(/\*\*/g, "").matchAll(/\d{1,2}\s+[a-zûéèôîà]+/gi)) {
+      const date = toDate(match[0]);
+      if (date) found.push(date);
+    }
+  }
+  return found;
 }
 
 /**

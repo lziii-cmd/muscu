@@ -121,3 +121,26 @@ mouvements différents — l'un vertical, l'autre horizontal.
 | Traction stricte pronation — (max − 1) par série | Traction stricte |
 | Traction supination stricte — 2 reps/série (max − 1) | Traction supination |
 | Traction négative pronation (5 s de descente) | Traction négative |
+| Traction | Traction stricte |
+| Développé militaire barre ou haltères | Développé militaire barre |
+| Extension triceps poulie ou barre au front | Extension triceps poulie |
+| Dips lestés ou sur banc | Dips |
+| Développé incliné barre ou haltères | Développé incliné haltères |
+| Gainage — planche lestée | Planche ventrale |
+| Pompes lestées ou déclinées | Pompes au sol |
+| Développé couché barre ou machine | Développé couché barre |
+| Rowing barre ou machine | Rowing barre |
+| Squat barre ou goblet squat | Squat barre |
+| Dips assistés ou sur banc | Dips assistés |
+| Gainage — hollow hold | Hollow body hold |
+| Gainage — hollow rocks | Hollow rocks |
+| Gainage — planche + gainage latéral | Gainage composé |
+| Gainage — planche + relevés de jambes | Gainage composé |
+| Superset : curl haltères + extension triceps nuque | Superset |
+| Superset : élévations latérales + extension triceps poulie | Superset |
+| Superset : face pull + curl barre | Superset |
+| Superset : leg extension + leg curl | Superset |
+| Superset : élévations latérales + curl marteau | Superset |
+| Circuit : squat PDC 20 + pompes 10 + gainage 30 s + montées sur chaise 20 | Circuit |
+| Marche rapide ou vélo — 20 min en continu | Marche rapide |
+| Mobilité complète | Mobilité |

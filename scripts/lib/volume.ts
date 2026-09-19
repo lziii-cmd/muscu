@@ -80,6 +80,34 @@ export function parseVolume(raw: string, label = ""): Volume {
     return { ...base, sets: Number(hold[1]), holdSecondsLow: low, holdSecondsHigh: high };
   }
 
+  // Durée par série : « 1 × 20 min ». À lire avant les répétitions, qui y
+  // verraient 20 reps.
+  const timed = text.match(/(\d+)\s*[×x]\s*(\d+)\s*min\b/i);
+  if (timed) {
+    const seconds = Number(timed[2]) * 60;
+    return { ...base, sets: Number(timed[1]), holdSecondsLow: seconds, holdSecondsHigh: seconds };
+  }
+
+  // Répétitions déduites du max, écrites dans la cellule : « 5 × max − 1 ».
+  const fromMax = text.match(/(\d+)\s*[×x]\s*max\s*-\s*(\d+)/i);
+  if (fromMax) {
+    return { ...base, sets: Number(fromMax[1]), maxOffset: Number(fromMax[2]) };
+  }
+
+  // Superset en circuit : « 3 tours × 10-12 » — un tour vaut une série.
+  const rounds = text.match(/(\d+)\s*tours?\s*[×x]\s*(\d+)(?:\s*-\s*(\d+))?(\s*s\b)?/i);
+  if (rounds) {
+    const low = Number(rounds[2]);
+    const high = rounds[3] ? Number(rounds[3]) : low;
+    return rounds[4]
+      ? { ...base, sets: Number(rounds[1]), holdSecondsLow: low, holdSecondsHigh: high }
+      : { ...base, sets: Number(rounds[1]), repsLow: low, repsHigh: high };
+  }
+
+  // Circuit décrit dans le nom de l'exercice : « 4 tours ».
+  const roundsOnly = text.match(/^(\d+)\s*tours?$/i);
+  if (roundsOnly) return { ...base, sets: Number(roundsOnly[1]) };
+
   // Répétitions, éventuellement en fourchette : « 4 × 6-8 »
   const reps = text.match(/(\d+)\s*[×x]\s*(\d+)(?:\s*-\s*(\d+))?/);
   if (reps) {

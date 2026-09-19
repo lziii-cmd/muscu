@@ -2,6 +2,11 @@
  * Construit les fichiers de seed depuis `PROGRAMME-COMPLET.md`.
  *
  *   npm run seed:build
+ *   npx tsx scripts/build-seed.ts --source programme-x.md --out data/seed/x.json --revue data/seed/REVUE-X.md
+ *
+ * Sans argument : le programme d'Abdou (PROGRAMME-COMPLET.md, complété par
+ * PROGRAMME-CALISTHENIE.md). Avec `--source` : n'importe quel document au
+ * même format, pour un autre compte.
  *
  * Produit :
  *   data/seed/programme.json  — données importées en base
@@ -23,16 +28,29 @@ import type { Volume } from "./lib/volume";
 import { weekdayOf } from "./lib/dates";
 
 const YEAR = 2026;
-const SOURCE = "PROGRAMME-COMPLET.md";
-/** Programme de calisthénie autonome, s'il existe (version 2 : séance unique). */
-const CALISTHENICS_SOURCE = "PROGRAMME-CALISTHENIE.md";
+const argument = (flag: string) => {
+  const i = process.argv.indexOf(flag);
+  return i === -1 ? undefined : process.argv[i + 1];
+};
+const SOURCE = argument("--source") ?? "PROGRAMME-COMPLET.md";
+/**
+ * Programme de calisthénie autonome, s'il existe (version 2 : séance unique).
+ * Par défaut seulement pour le document d'Abdou ; ailleurs, sur demande.
+ */
+const CALISTHENICS_SOURCE =
+  argument("--calisthenie") ?? (argument("--source") ? undefined : "PROGRAMME-CALISTHENIE.md");
+const OUT_JSON = argument("--out") ?? "data/seed/programme.json";
+const OUT_REVIEW = argument("--revue") ?? "data/seed/REVUE.md";
+const RAW = readFileSync(SOURCE, "utf8");
+/** Titre du document : « Programme Abdoulaye — Prise de masse ». */
+const TITLE = RAW.match(/^#\s+(.+)$/m)?.[1].trim() ?? SOURCE;
 
 function fail(message: string): never {
   console.error(`\n✗ ${message}\n`);
   process.exit(1);
 }
 
-const parsed = parseProgramme(readFileSync(SOURCE, "utf8"), YEAR);
+const parsed = parseProgramme(RAW, YEAR);
 
 /*
  * La calisthénie peut vivre dans son propre document. Il complète alors le
@@ -40,9 +58,10 @@ const parsed = parseProgramme(readFileSync(SOURCE, "utf8"), YEAR);
  * test, son point de départ et ses jours de test. Les échelles de progression
  * n'y existent plus ; on ne les exige donc que du format en deux parties.
  */
-const standaloneCalisthenics = parsed.calisthenie.weeks.length === 0 && existsSync(CALISTHENICS_SOURCE);
+const standaloneCalisthenics =
+  parsed.calisthenie.weeks.length === 0 && CALISTHENICS_SOURCE !== undefined && existsSync(CALISTHENICS_SOURCE);
 if (standaloneCalisthenics) {
-  const cali = parseCalisthenicsDocument(readFileSync(CALISTHENICS_SOURCE, "utf8"), YEAR);
+  const cali = parseCalisthenicsDocument(readFileSync(CALISTHENICS_SOURCE!, "utf8"), YEAR);
   parsed.calisthenie = cali.calisthenie;
   parsed.targets = cali.targets;
   parsed.testMetrics = cali.testMetrics;
@@ -111,7 +130,16 @@ for (const [name, part] of [
  */
 const COMPOUND_REST_MIN = 120;
 const ISOLATION_REST_MAX = 90;
-for (const day of parsed.ppl.days) {
+/*
+ * Ces règles (structure des 60 minutes, alternative maison) sont celles du
+ * document qui porte une colonne « Alternative maison ». Un programme qui n'en
+ * a pas — prise de masse, perte de gras — a sa propre structure de repos ;
+ * l'y soumettre refuserait un document juste.
+ */
+const withHomeColumn = parsed.ppl.days.some((day) =>
+  day.sessions.some((session) => session.exercises.some((exercise) => exercise.homeAlternative !== "")),
+);
+for (const day of withHomeColumn ? parsed.ppl.days : []) {
   if (day.isRestDay) continue;
   for (const session of day.sessions) {
     for (const exercise of session.exercises) {
@@ -172,7 +200,7 @@ if (hasCalisthenics && standaloneCalisthenics) {
   if (parsed.targets.length === 0) problems.push("calisthénie : aucun objectif aux jalons");
   if (parsed.testMetrics.length === 0) problems.push("calisthénie : aucune mesure de test");
   if (Object.keys(parsed.startingMax).length === 0) problems.push("calisthénie : point de départ introuvable");
-} else if (hasCalisthenics) {
+} else if (hasCalisthenics && /^#\s+PARTIE 2/m.test(RAW)) {
   if (parsed.ladders.length < 5) problems.push(`${parsed.ladders.length} échelles seulement`);
   if (parsed.targets.length < 5) problems.push(`${parsed.targets.length} objectifs seulement`);
   if (parsed.testMetrics.length < 5) problems.push(`${parsed.testMetrics.length} métriques seulement`);
@@ -244,7 +272,7 @@ if (missingGuides.length > 0) {
 }
 
 writeFileSync(
-  "data/seed/programme.json",
+  OUT_JSON,
   JSON.stringify(
     {
       generatedAt: new Date().toISOString(),
@@ -267,7 +295,7 @@ writeFileSync(
       programs: [
         {
           code: "ppl",
-          name: "Musculation PPL -- Soir",
+          name: SOURCE === "PROGRAMME-COMPLET.md" ? "Musculation PPL -- Soir" : TITLE,
           defaultSlot: "salle",
           weeks: parsed.ppl.weeks,
           days: parsed.ppl.days,
@@ -419,7 +447,7 @@ if (parsed.testMetrics.length > 0) {
   out.push("");
 }
 
-writeFileSync("data/seed/REVUE.md", out.join("\n"), "utf8");
+writeFileSync(OUT_REVIEW, out.join("\n"), "utf8");
 
 // ---------------------------------------------------------------------------
 const count = (part: typeof parsed.ppl) =>
